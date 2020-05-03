@@ -60,7 +60,6 @@ async function main() {
   const client = new DenoClient({
     host: args.host,
     port: args.port,
-    keepAlive: 10,
     logger,
   });
 
@@ -76,6 +75,8 @@ async function main() {
   if (puback) {
     logger.info(`received puback for message id ${puback.id}`);
   }
+
+  await client.disconnect();
 }
 
 main();

@@ -1,3 +1,5 @@
+import EventEmitter from 'https://deno.land/std/node/events.ts';
+
 import {
   encode,
   decode,
@@ -81,6 +83,7 @@ export default abstract class BaseClient {
       reject: (err: Error) => void;
     }
   >();
+  events: EventEmitter = new EventEmitter();
 
   defaultClientIdPrefix: string = 'mqttts';
   defaultConnectTimeout: number = 10 * 1000;
@@ -168,7 +171,7 @@ export default abstract class BaseClient {
       id,
     };
 
-    this.send(packet);
+    await this.send(packet);
 
     if (qos > 0) {
       return new Promise((resolve, reject) => {
@@ -177,7 +180,10 @@ export default abstract class BaseClient {
     }
   }
 
-  public subscribe(topic: string, qos?: 0 | 1 | 2) {
+  public async subscribe(
+    topic: string,
+    qos?: 0 | 1 | 2
+  ): Promise<SubackPacket | void> {
     switch (this.connectionState) {
       case 'connected':
         break;
@@ -187,11 +193,13 @@ export default abstract class BaseClient {
         );
     }
 
-    this.send({
+    await this.send({
       type: 'subscribe',
       id: this.nextPacketId(),
       subscriptions: [{ topic, qos: qos || 0 }],
     });
+
+    // TODO: wait for suback here?
   }
 
   public unsubscribe(topic: string) {
@@ -402,7 +410,7 @@ export default abstract class BaseClient {
   }
 
   protected handlePublish(packet: PublishPacket) {
-    this.emit('message', packet);
+    this.emit('message', packet.topic, packet.payload, packet);
 
     if (packet.qos === 1) {
       if (typeof packet.id !== 'number' || packet.id < 1) {
@@ -642,10 +650,16 @@ export default abstract class BaseClient {
     return decode(bytes);
   }
 
-  protected emit(event: string, data?: any) {
-    // if (typeof this.options[`on${event}`] === 'function') {
-    //   this.options[`on${event}`](data);
-    // }
+  public on(eventName: string, listener: Function) {
+    this.events.on(eventName, listener);
+  }
+
+  public off(eventName: string, listener: Function) {
+    this.events.off(eventName, listener);
+  }
+
+  protected emit(eventName: string, ...args: unknown[]) {
+    this.events.emit(eventName, ...args);
   }
 
   protected log(msg: string, ...args: unknown[]) {
