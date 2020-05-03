@@ -142,7 +142,11 @@ export default abstract class BaseClient {
     return deferred;
   }
 
-  public publish(topic: string, payload: any, options?: PublishOptions) {
+  public async publish(
+    topic: string,
+    payload: any,
+    options?: PublishOptions
+  ): Promise<PubackPacket | undefined> {
     switch (this.connectionState) {
       case 'connected':
         break;
@@ -328,7 +332,7 @@ export default abstract class BaseClient {
     const packet = this.decode(bytes);
 
     if (packet) {
-      this.log(`received packet type ${packet.type}`);
+      this.log(`received ${packet.type} packet`, packet);
 
       this.packetReceived(packet);
 
@@ -579,6 +583,8 @@ export default abstract class BaseClient {
 
     this.connectionState = newState;
 
+    this.log(`connectionState: ${oldState} -> ${newState}`);
+
     this.emit('statechange', { from: oldState, to: newState });
 
     this.emit(newState);
@@ -615,7 +621,7 @@ export default abstract class BaseClient {
   }
 
   protected async send(packet: AnyPacket) {
-    this.log(`sending packet type ${packet.type}`);
+    this.log(`sending ${packet.type} packet`, packet);
 
     this.emit('packetsend', packet);
 

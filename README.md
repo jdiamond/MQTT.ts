@@ -19,7 +19,7 @@ To publish a message to a local broker, run these commands in separate shells:
 ```
 /usr/local/sbin/mosquitto
 mosquitto_sub -t '#' -v
-deno run --allow-net test-pub.ts
+deno run --allow-net pub.ts -t test -m test
 ```
 
 Protocol: https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html

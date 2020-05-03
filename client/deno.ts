@@ -94,12 +94,18 @@ export async function setupLogger(levelName: LevelName) {
 
           const args = logRecord.args;
 
-          if (args.length > 0 && args[0] instanceof Uint8Array) {
-            output +=
-              ' ' +
-              [...args[0]]
-                .map((byte) => byte.toString(16).padStart(2, '0'))
-                .join(' ');
+          if (args.length > 0) {
+            for (const arg of args) {
+              if (arg instanceof Uint8Array) {
+                output +=
+                  ' ' +
+                  [...arg]
+                    .map((byte) => byte.toString(16).padStart(2, '0'))
+                    .join(' ');
+              } else if (typeof arg === 'object') {
+                output += ' ' + Deno.inspect(arg);
+              }
+            }
           }
 
           return output;
