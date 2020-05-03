@@ -48,6 +48,7 @@ export type PublishOptions = {
 type ConnectionStates =
   | 'never-connected'
   | 'connecting'
+  | 'waiting-for-connack'
   | 'connect-failed'
   | 'connected'
   | 'offline'
@@ -57,11 +58,12 @@ type ConnectionStates =
 
 const packetIdLimit = 2 ** 16;
 
-export default abstract class Client {
+export default abstract class BaseClient {
   options: ClientOptions;
   clientId: string;
   keepAlive: number;
   connectionState: ConnectionStates;
+  connectionCount: number = 0;
   reconnectAttempt: number;
   lastPacketId: number;
   lastPacketTime: Date | undefined;
@@ -80,8 +82,8 @@ export default abstract class Client {
     }
   >();
 
-  defaultClientIdPrefix: string = 'mqtt.ts';
-  defaultConnectTimeout: number = 30 * 1000;
+  defaultClientIdPrefix: string = 'mqttts';
+  defaultConnectTimeout: number = 10 * 1000;
   defaultKeepAlive: number = 45;
   defaultReconnectOptions: DefaultReconnectOptions = {
     min: 1000,
@@ -102,7 +104,7 @@ export default abstract class Client {
 
   // Public methods
 
-  public connect(reconnecting?: boolean): Promise<ConnackPacket> {
+  public async connect(reconnecting?: boolean): Promise<ConnackPacket | null> {
     switch (this.connectionState) {
       case 'never-connected':
       case 'connect-failed':
@@ -115,18 +117,29 @@ export default abstract class Client {
         );
     }
 
+    this.connectionCount = 0;
+
     this.changeState(reconnecting ? 'reconnecting' : 'connecting');
 
-    return new Promise(async (resolve, reject) => {
+    const deferred = new Promise<ConnackPacket>((resolve, reject) => {
       this.resolveConnect = resolve;
       this.rejectConnect = reject;
-
-      try {
-        await this.open();
-      } catch (err) {
-        this.connectionFailed();
-      }
     });
+
+    try {
+      await this.open();
+
+      await this.connectionOpened();
+
+      this.startReading().then(
+        () => {},
+        () => {}
+      );
+    } catch (err) {
+      this.connectionFailed();
+    }
+
+    return deferred;
   }
 
   public publish(topic: string, payload: any, options?: PublishOptions) {
@@ -194,7 +207,7 @@ export default abstract class Client {
     });
   }
 
-  public disconnect() {
+  public async disconnect() {
     if (this.connectTimer) {
       clearTimeout(this.connectTimer);
       this.connectTimer = null;
@@ -221,14 +234,16 @@ export default abstract class Client {
 
     this.changeState('disconnecting');
 
-    this.send({ type: 'disconnect' });
+    await this.send({ type: 'disconnect' });
 
-    this.close();
+    await this.close();
   }
 
   // Connection methods implemented by subclasses
 
   protected abstract async open(): Promise<void>;
+
+  protected abstract async startReading(): Promise<void>;
 
   protected abstract async write(bytes: Uint8Array): Promise<void>;
 
@@ -236,18 +251,20 @@ export default abstract class Client {
 
   // Connection methods invoked by subclasses
 
-  protected connectionOpened() {
+  protected async connectionOpened() {
     this.log('connectionOpened');
 
     this.startConnectTimer();
 
-    this.send({
+    await this.send({
       type: 'connect',
       clientId: this.clientId,
       keepAlive: this.keepAlive,
       username: this.options.username,
       password: this.options.password,
     });
+
+    this.changeState('waiting-for-connack');
   }
 
   protected connectionFailed() {
@@ -360,8 +377,7 @@ export default abstract class Client {
 
   protected handleConnack(packet: ConnackPacket) {
     switch (this.connectionState) {
-      case 'connecting':
-      case 'reconnecting':
+      case 'waiting-for-connack':
         break;
       default:
         throw new Error(
@@ -369,13 +385,13 @@ export default abstract class Client {
         );
     }
 
-    const wasConnecting = this.connectionState === 'connecting';
-
     this.changeState('connected');
 
-    if (wasConnecting && this.resolveConnect) {
+    if (this.connectionCount === 0 && this.resolveConnect) {
       this.resolveConnect(packet);
     }
+
+    this.connectionCount++;
 
     this.stopConnectTimer();
     this.startKeepAliveTimer();
@@ -449,22 +465,26 @@ export default abstract class Client {
 
   protected startConnectTimer() {
     this.connectTimer = setTimeout(() => {
-      if (this.connectionState !== 'connected') {
-        const wasConnecting = this.connectionState === 'connecting';
-
-        this.changeState('connect-failed');
-
-        if (wasConnecting) {
-          this.reconnectAttempt = 0;
-
-          this.rejectConnect(new Error('connect timed out'));
-        }
-
-        this.startReconnectTimer();
-      } else {
-        this.log('connectTimer should have been cancelled');
-      }
+      this.connectTimedOut();
     }, this.options.connectTimeout || this.defaultConnectTimeout);
+  }
+
+  protected connectTimedOut() {
+    if (this.connectionState !== 'connected') {
+      const wasConnecting = this.connectionState === 'connecting';
+
+      this.changeState('connect-failed');
+
+      if (wasConnecting) {
+        this.reconnectAttempt = 0;
+
+        this.rejectConnect(new Error('connect timed out'));
+      }
+
+      this.startReconnectTimer();
+    } else {
+      this.log('connectTimer should have been cancelled');
+    }
   }
 
   protected stopConnectTimer() {
@@ -594,7 +614,7 @@ export default abstract class Client {
     return this.lastPacketId;
   }
 
-  protected send(packet: AnyPacket) {
+  protected async send(packet: AnyPacket) {
     this.log(`sending packet type ${packet.type}`);
 
     this.emit('packetsend', packet);
@@ -603,7 +623,7 @@ export default abstract class Client {
 
     this.emit('bytessent', bytes);
 
-    this.write(bytes);
+    await this.write(bytes);
 
     this.lastPacketTime = new Date();
   }

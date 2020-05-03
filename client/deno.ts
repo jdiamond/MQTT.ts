@@ -1,8 +1,8 @@
-import Client from './mod.ts';
+import BaseClient from './base.ts';
 import { BufReader } from 'https://deno.land/std/io/bufio.ts';
 import { decodeLength } from '../packets/length.ts';
 
-export default class DenoClient extends Client {
+export default class DenoClient extends BaseClient {
   private conn: Deno.Conn | undefined;
 
   protected async open() {
@@ -10,14 +10,9 @@ export default class DenoClient extends Client {
       hostname: this.options.host || 'localhost',
       port: this.options.port || 1883,
     });
-
-    this.connectionOpened();
-
-    // no await
-    this.startReading();
   }
 
-  private async startReading() {
+  protected async startReading() {
     if (!this.conn) {
       throw new Error('no connection');
     }

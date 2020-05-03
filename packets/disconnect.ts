@@ -11,6 +11,8 @@ export default {
   },
 
   decode(_buffer: Uint8Array, _remainingLength: number): DisconnectPacket {
-    throw new Error('disconnect.decode is not implemented yet');
+    return {
+      type: 'disconnect',
+    };
   },
 };
