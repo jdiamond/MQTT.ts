@@ -1,8 +1,8 @@
-import { equal } from 'https://deno.land/std/testing/asserts.ts';
+import { assertEquals } from 'https://deno.land/std/testing/asserts.ts';
 import { encode, decode } from './mod.ts';
 
 Deno.test('encodePingreqPacket', function encodePingreqPacket() {
-  equal(
+  assertEquals(
     encode({
       type: 'pingreq',
     }),
@@ -15,7 +15,7 @@ Deno.test('encodePingreqPacket', function encodePingreqPacket() {
 });
 
 Deno.test('decodePingreqPacket', function decodePingreqPacket() {
-  equal(
+  assertEquals(
     decode(
       Uint8Array.from([
         // fixedHeader
@@ -30,5 +30,5 @@ Deno.test('decodePingreqPacket', function decodePingreqPacket() {
 });
 
 Deno.test('decodeShortPingrecPackets', function decodeShortPingrecPackets() {
-  equal(decode(Uint8Array.from([0xc0])), null);
+  assertEquals(decode(Uint8Array.from([0xc0])), null);
 });

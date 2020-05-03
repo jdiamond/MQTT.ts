@@ -1,8 +1,8 @@
-import { equal } from 'https://deno.land/std/testing/asserts.ts';
+import { assertEquals } from 'https://deno.land/std/testing/asserts.ts';
 import { encode } from './mod.ts';
 
 Deno.test('encodeUnsubscribePacket', function encodeUnsubscribePacket() {
-  equal(
+  assertEquals(
     encode({
       type: 'unsubscribe',
       id: 1,

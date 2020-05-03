@@ -1,8 +1,8 @@
-import { equal } from 'https://deno.land/std/testing/asserts.ts';
+import { assertEquals } from 'https://deno.land/std/testing/asserts.ts';
 import { encode, decode } from './mod.ts';
 
 Deno.test('encodePubcompPacket', function encodePubcompPacket() {
-  equal(
+  assertEquals(
     encode({
       type: 'pubcomp',
       id: 1337,
@@ -19,7 +19,7 @@ Deno.test('encodePubcompPacket', function encodePubcompPacket() {
 });
 
 Deno.test('decodePubcompPacket', function decodePubcompPacket() {
-  equal(
+  assertEquals(
     decode(
       Uint8Array.from([
         // fixedHeader
@@ -38,7 +38,7 @@ Deno.test('decodePubcompPacket', function decodePubcompPacket() {
 });
 
 Deno.test('decodeShortPubcompPackets', function decodeShortPubcompPackets() {
-  equal(decode(Uint8Array.from([0x70])), null);
-  equal(decode(Uint8Array.from([0x70, 2])), null);
-  equal(decode(Uint8Array.from([0x70, 2, 5])), null);
+  assertEquals(decode(Uint8Array.from([0x70])), null);
+  assertEquals(decode(Uint8Array.from([0x70, 2])), null);
+  assertEquals(decode(Uint8Array.from([0x70, 2, 5])), null);
 });

@@ -1,8 +1,8 @@
-import { equal } from 'https://deno.land/std/testing/asserts.ts';
+import { assertEquals } from 'https://deno.land/std/testing/asserts.ts';
 import { encode, decode } from './mod.ts';
 
 Deno.test('encodePubackPacket', function encodePubackPacket() {
-  equal(
+  assertEquals(
     encode({
       type: 'puback',
       id: 1337,
@@ -19,7 +19,7 @@ Deno.test('encodePubackPacket', function encodePubackPacket() {
 });
 
 Deno.test('decodePubackPacket', function decodePubackPacket() {
-  equal(
+  assertEquals(
     decode(
       Uint8Array.from([
         // fixedHeader
@@ -38,7 +38,7 @@ Deno.test('decodePubackPacket', function decodePubackPacket() {
 });
 
 Deno.test('decodeShortPubackPackets', function decodeShortPubackPackets() {
-  equal(decode(Uint8Array.from([0x40])), null);
-  equal(decode(Uint8Array.from([0x40, 2])), null);
-  equal(decode(Uint8Array.from([0x40, 2, 5])), null);
+  assertEquals(decode(Uint8Array.from([0x40])), null);
+  assertEquals(decode(Uint8Array.from([0x40, 2])), null);
+  assertEquals(decode(Uint8Array.from([0x40, 2, 5])), null);
 });

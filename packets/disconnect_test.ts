@@ -1,8 +1,8 @@
-import { equal } from 'https://deno.land/std/testing/asserts.ts';
+import { assertEquals } from 'https://deno.land/std/testing/asserts.ts';
 import { encode, decode } from './mod.ts';
 
 Deno.test('encodeDisconnectPacket', function encodeDisconnectPacket() {
-  equal(
+  assertEquals(
     encode({
       type: 'disconnect',
     }),
@@ -15,7 +15,7 @@ Deno.test('encodeDisconnectPacket', function encodeDisconnectPacket() {
 });
 
 Deno.test('decodeDisconnectPacket', function decodeDisconnectPacket() {
-  equal(
+  assertEquals(
     decode(
       Uint8Array.from([
         // fixedHeader

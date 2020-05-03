@@ -1,10 +1,10 @@
-import { equal } from 'https://deno.land/std/testing/asserts.ts';
+import { assertEquals } from 'https://deno.land/std/testing/asserts.ts';
 import { encode, decode } from './mod.ts';
 
 Deno.test(
   'encodeConnectPacketWithClientId',
   function encodeConnectPacketWithClientId() {
-    equal(
+    assertEquals(
       encode({
         type: 'connect',
         clientId: 'id',
@@ -38,7 +38,7 @@ Deno.test(
 Deno.test(
   'encodeConnectPacketWithCleanFalse',
   function encodeConnectPacketWithCleanFalse() {
-    equal(
+    assertEquals(
       encode({
         type: 'connect',
         clientId: 'id',
@@ -73,7 +73,7 @@ Deno.test(
 Deno.test(
   'encodeConnectPacketWithKeepAlive',
   function encodeConnectPacketWithKeepAlive() {
-    equal(
+    assertEquals(
       encode({
         type: 'connect',
         clientId: 'id',
@@ -108,7 +108,7 @@ Deno.test(
 Deno.test(
   'encodeConnectPacketWithUsernameAndPassword',
   function encodeConnectPacketWithUsernameAndPassword() {
-    equal(
+    assertEquals(
       encode({
         type: 'connect',
         clientId: 'id',
@@ -158,7 +158,7 @@ Deno.test(
 Deno.test(
   'decodeConnectPacketWithUsernameAndPassword',
   function decodeConnectPacketWithUsernameAndPassword() {
-    equal(
+    assertEquals(
       decode(
         Uint8Array.from([
           // fixedHeader

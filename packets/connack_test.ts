@@ -1,8 +1,8 @@
-import { equal } from 'https://deno.land/std/testing/asserts.ts';
+import { assertEquals } from 'https://deno.land/std/testing/asserts.ts';
 import { encode, decode } from './mod.ts';
 
 Deno.test('encodeConnackPacket', function encodeConnackPacket() {
-  equal(
+  assertEquals(
     encode({
       type: 'connack',
       sessionPresent: false,
@@ -20,7 +20,7 @@ Deno.test('encodeConnackPacket', function encodeConnackPacket() {
 });
 
 Deno.test('decodeConnackPacket', function decodeConnackPacket() {
-  equal(
+  assertEquals(
     decode(
       Uint8Array.from([
         // fixedHeader
@@ -42,7 +42,7 @@ Deno.test('decodeConnackPacket', function decodeConnackPacket() {
 Deno.test(
   'decodeConnackPacketWithSessionPresent',
   function decodeConnackPacketWithSessionPresent() {
-    equal(
+    assertEquals(
       decode(
         Uint8Array.from([
           // fixedHeader
@@ -65,7 +65,7 @@ Deno.test(
 Deno.test(
   'decodeConnackPacketWithReturnCode',
   function decodeConnackPacketWithReturnCode() {
-    equal(
+    assertEquals(
       decode(
         Uint8Array.from([
           // fixedHeader
@@ -86,7 +86,7 @@ Deno.test(
 );
 
 Deno.test('decodeShortConnackPackets', function decodeShortConnackPackets() {
-  equal(decode(Uint8Array.from([32])), null);
-  equal(decode(Uint8Array.from([32, 2])), null);
-  equal(decode(Uint8Array.from([32, 2, 0])), null);
+  assertEquals(decode(Uint8Array.from([32])), null);
+  assertEquals(decode(Uint8Array.from([32, 2])), null);
+  assertEquals(decode(Uint8Array.from([32, 2, 0])), null);
 });
