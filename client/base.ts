@@ -642,7 +642,7 @@ export default abstract class BaseClient {
     // }
   }
 
-  protected log(...args: unknown[]) {
-    console.log(...args);
+  protected log(msg: string, ...args: unknown[]) {
+    // console.log(msg, ...args);
   }
 }

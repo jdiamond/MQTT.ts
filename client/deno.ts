@@ -1,9 +1,23 @@
-import BaseClient from './base.ts';
-import { BufReader } from 'https://deno.land/std/io/bufio.ts';
+import BaseClient, { ClientOptions } from './base.ts';
+import * as log from 'https://deno.land/std/log/mod.ts';
+import { Logger, LogRecord } from 'https://deno.land/std/log/logger.ts';
+import { LevelName } from 'https://deno.land/std/log/levels.ts';
 import { decodeLength } from '../packets/length.ts';
+import { BufReader } from 'https://deno.land/std/io/bufio.ts';
+
+export type DenoClientOptions = ClientOptions & {
+  logger?: Logger;
+};
 
 export default class DenoClient extends BaseClient {
   private conn: Deno.Conn | undefined;
+  private logger: Logger;
+
+  constructor(options: DenoClientOptions) {
+    super(options);
+
+    this.logger = options.logger || log.getLogger();
+  }
 
   protected async open() {
     this.conn = await Deno.connect({
@@ -50,7 +64,8 @@ export default class DenoClient extends BaseClient {
     }
 
     try {
-      this.log(bytes);
+      this.log('writing bytes', bytes);
+
       await this.conn.write(bytes);
     } catch (err) {
       this.log('caught error while writing');
@@ -64,4 +79,40 @@ export default class DenoClient extends BaseClient {
 
     this.conn.close();
   }
+
+  protected log(msg: string, ...args: unknown[]) {
+    this.logger.debug(msg, ...args);
+  }
+}
+
+export async function setupLogger(levelName: LevelName) {
+  await log.setup({
+    handlers: {
+      mqtt: new log.handlers.ConsoleHandler(levelName, {
+        formatter: (logRecord: LogRecord) => {
+          let output = `${logRecord.levelName} ${logRecord.msg}`;
+
+          const args = logRecord.args;
+
+          if (args.length > 0 && args[0] instanceof Uint8Array) {
+            output +=
+              ' ' +
+              [...args[0]]
+                .map((byte) => byte.toString(16).padStart(2, '0'))
+                .join(' ');
+          }
+
+          return output;
+        },
+      }),
+    },
+    loggers: {
+      mqtt: {
+        level: levelName,
+        handlers: ['mqtt'],
+      },
+    },
+  });
+
+  return log.getLogger('mqtt');
 }
