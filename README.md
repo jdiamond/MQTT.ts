@@ -24,6 +24,25 @@ deno run --allow-net pub.ts -t "foo/bar" -m "baz"
 
 Protocol: https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html
 
+## Deno
+
+The "raw" TypeScript files are import'able by Deno.
+
+Look in pub.ts to see an example of using the client.
+
+## Node.js
+
+A Node.js build can be made like this:
+
+```
+deno bundle client/node.ts > node.mjs
+npx rollup node.mjs --file node.cjs --format cjs
+```
+
+Look in node-pub.js to see an example of using it.
+
+## Browser
+
 A browser build can be made like this:
 
 ```
@@ -33,11 +52,11 @@ npx terser -o browser.min.js browser.js
 
 Look in index.html to see an example of using it.
 
-TODO:
+## TODO
 
 - finish encoders, decoders, and tests for all packet types
 - unit tests for abstract client
 - retry logic for unacknowledged publishes
 - async iterators for messages matching topic patterns
 - api docs
-- node client
+- npm package

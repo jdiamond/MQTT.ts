@@ -16,6 +16,7 @@
   "homepage": "https://github.com/jdiamond/MQTT.ts#readme",
   "dependencies": {},
   "devDependencies": {
+    "rollup": "^2.7.6",
     "serve": "^11.3.0",
     "terser": "^4.6.13"
   },
