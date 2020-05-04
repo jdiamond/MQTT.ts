@@ -17,12 +17,21 @@ deno test
 To test publishing and subscribing to a local broker, run these commands in separate shells:
 
 ```
-/usr/local/sbin/mosquitto
+/usr/local/sbin/mosquitto -c mosquitto.conf
 deno run --allow-net sub.ts -t "foo/#" -v
 deno run --allow-net pub.ts -t "foo/bar" -m "baz"
 ```
 
 Protocol: https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html
+
+A browser build can be made like this:
+
+```
+deno bundle client/browser.ts > browser.js
+npx terser -o browser.min.js browser.js
+```
+
+Look in index.html to see an example of using it.
 
 TODO:
 
@@ -32,4 +41,3 @@ TODO:
 - async iterators for messages matching topic patterns
 - api docs
 - node client
-- browser client

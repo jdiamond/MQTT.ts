@@ -1,5 +1,3 @@
-import EventEmitter from 'https://deno.land/std/node/events.ts';
-
 import {
   encode,
   decode,
@@ -83,7 +81,7 @@ export default abstract class BaseClient {
       reject: (err: Error) => void;
     }
   >();
-  events: EventEmitter = new EventEmitter();
+  eventListeners: Map<string, Function[]> = new Map();
 
   defaultClientIdPrefix: string = 'mqttts';
   defaultConnectTimeout: number = 10 * 1000;
@@ -651,15 +649,35 @@ export default abstract class BaseClient {
   }
 
   public on(eventName: string, listener: Function) {
-    this.events.on(eventName, listener);
+    let listeners = this.eventListeners.get(eventName);
+
+    if (!listeners) {
+      listeners = [];
+      this.eventListeners.set(eventName, listeners);
+    }
+
+    listeners.push(listener);
   }
 
   public off(eventName: string, listener: Function) {
-    this.events.off(eventName, listener);
+    const listeners = this.eventListeners.get(eventName);
+
+    if (listeners) {
+      this.eventListeners.set(
+        eventName,
+        listeners.filter((l) => l !== listener)
+      );
+    }
   }
 
   protected emit(eventName: string, ...args: unknown[]) {
-    this.events.emit(eventName, ...args);
+    const listeners = this.eventListeners.get(eventName);
+
+    if (listeners) {
+      for (const listener of listeners) {
+        listener(...args);
+      }
+    }
   }
 
   protected log(msg: string, ...args: unknown[]) {

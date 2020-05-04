@@ -53,6 +53,8 @@ export default class DenoClient extends BaseClient {
 
         bufReader.readFull(buf);
 
+        this.log('received bytes', buf);
+
         this.bytesReceived(buf);
       }
     }
@@ -63,13 +65,9 @@ export default class DenoClient extends BaseClient {
       throw new Error('no connection');
     }
 
-    try {
-      this.log('writing bytes', bytes);
+    this.log('writing bytes', bytes);
 
-      await this.conn.write(bytes);
-    } catch (err) {
-      this.log('caught error while writing');
-    }
+    await this.conn.write(bytes);
   }
 
   protected async close() {
