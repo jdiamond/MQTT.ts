@@ -21,6 +21,7 @@
     "terser": "^4.6.13"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "npm run test:deno",
+    "test:deno": "deno test client packets"
   }
 }

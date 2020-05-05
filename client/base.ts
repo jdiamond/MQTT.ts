@@ -83,6 +83,7 @@ export default abstract class BaseClient {
   >();
   eventListeners: Map<string, Function[]> = new Map();
 
+  // TODO: combine these into one defaults property?
   defaultClientIdPrefix: string = 'mqttts';
   defaultConnectTimeout: number = 10 * 1000;
   defaultKeepAlive: number = 45;
@@ -235,18 +236,18 @@ export default abstract class BaseClient {
 
     switch (this.connectionState) {
       case 'connected':
+        this.changeState('disconnecting');
+        await this.send({ type: 'disconnect' });
+        await this.close();
+        break;
+      case 'connect-failed':
+        this.changeState('disconnected');
         break;
       default:
         throw new Error(
           `should not be disconnecting in ${this.connectionState} state`
         );
     }
-
-    this.changeState('disconnecting');
-
-    await this.send({ type: 'disconnect' });
-
-    await this.close();
   }
 
   // Connection methods implemented by subclasses
@@ -259,12 +260,10 @@ export default abstract class BaseClient {
 
   protected abstract async close(): Promise<void>;
 
-  // Connection methods invoked by subclasses
+  // Methods that can be overridden by subclasses
 
   protected async connectionOpened() {
     this.log('connectionOpened');
-
-    this.startConnectTimer();
 
     await this.send({
       type: 'connect',
@@ -275,6 +274,8 @@ export default abstract class BaseClient {
     });
 
     this.changeState('waiting-for-connack');
+
+    this.startConnectTimer();
   }
 
   protected connectionFailed() {
@@ -347,8 +348,6 @@ export default abstract class BaseClient {
       this.incomingBuffer = bytes;
     }
   }
-
-  // Methods that can be overridden by subclasses
 
   protected packetReceived(packet: AnyPacket) {
     this.emit('packetreceive', packet);
