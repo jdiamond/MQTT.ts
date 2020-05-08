@@ -591,7 +591,10 @@ export default abstract class BaseClient {
 
     this.log(`starting timer ${name} for ${delay}ms`);
 
-    this.timers[name] = setTimeout(cb, delay);
+    this.timers[name] = setTimeout(() => {
+      delete this.timers[name];
+      cb();
+    }, delay);
   }
 
   protected stopTimer(name: string) {
