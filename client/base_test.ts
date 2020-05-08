@@ -4,6 +4,9 @@ import { encode, decode, AnyPacket } from '../packets/mod.ts';
 
 class TestClient extends BaseClient {
   writtenPackets: AnyPacket[] = [];
+  timerCallbacks: { [key: string]: Function } = {};
+
+  // These methods must be overridden by BaseClient subclasses:
 
   async open() {}
 
@@ -18,8 +21,26 @@ class TestClient extends BaseClient {
     this.connectionClosed();
   }
 
+  // This method is for tests to pretend to be a server sending packets to the client:
+
   receive(packet: AnyPacket) {
     this.bytesReceived(encode(packet));
+  }
+
+  // These methods are here to simulate timers without actually passing time:
+
+  startTimer(name: string, cb: (...args: unknown[]) => void, _delay: number) {
+    this.timerCallbacks[name] = cb;
+  }
+
+  stopTimer(_name: string) {}
+
+  timerExists(name: string) {
+    return !!this.timerCallbacks[name];
+  }
+
+  triggerTimer(name: string) {
+    this.timerCallbacks[name]();
   }
 }
 
@@ -34,7 +55,8 @@ Deno.test('connect/disconnect', async () => {
 
   assertEquals(client.connectionState, 'connecting');
 
-  await sleep(10);
+  // Sleep a little to allow the connect packet to be sent.
+  await sleep(1);
 
   assertEquals(client.writtenPackets[0].type, 'connect');
   assertEquals(client.connectionState, 'waiting-for-connack');
@@ -51,10 +73,11 @@ Deno.test('connect/disconnect', async () => {
 
   assertEquals(client.connectionState, 'disconnecting');
 
-  await sleep(10);
+  // Sleep a little to allow the disconnect packet to be sent.
+  await sleep(1);
 
-  assertEquals(client.connectionState, 'disconnected');
   assertEquals(client.writtenPackets[1].type, 'disconnect');
+  assertEquals(client.connectionState, 'disconnected');
 });
 
 Deno.test('open throws', async () => {
@@ -68,6 +91,7 @@ Deno.test('open throws', async () => {
 
   assertEquals(client.connectionState, 'connecting');
 
+  // Sleep a little to allow the connect packet to be sent.
   await sleep(1);
 
   assertEquals(client.connectionState, 'connect-failed');
@@ -81,9 +105,10 @@ Deno.test('open throws', async () => {
 
   assertEquals(client.connectionState, 'disconnected');
 
-  await sleep(10);
+  // Sleep long enough for the disconnect packet to have been written.
+  await sleep(1);
 
-  // No disconnect packet should have been written.
+  // But no disconnect packet should have been written.
   assertEquals(client.writtenPackets.length, 0);
 });
 
@@ -94,8 +119,7 @@ Deno.test('waiting for connack times out', async () => {
 
   assertEquals(client.connectionState, 'connecting');
 
-  // Sleep a little to send a connect packet, but not long
-  // enough to time out waiting for the connack packet.
+  // Sleep a little to allow the connect packet to be sent.
   await sleep(1);
 
   // Now we see the connect packet was written.
@@ -105,8 +129,8 @@ Deno.test('waiting for connack times out', async () => {
   assertEquals(client.connectionState, 'waiting-for-connack');
 
   // This is when we should receive the connack packet.
-  // Sleep past its timeout instead.
-  await sleep(10);
+  // Simulate time passing by manually triggering the connect timer.
+  client.triggerTimer('connect');
 
   assertEquals(client.connectionState, 'connect-failed');
 
@@ -116,8 +140,9 @@ Deno.test('waiting for connack times out', async () => {
 
   assertEquals(client.connectionState, 'disconnected');
 
-  await sleep(10);
+  // Sleep long enough for the disconnect packet to have been written.
+  await sleep(1);
 
-  // No disconnect packet should have been written.
+  // But no disconnect packet should have been written.
   assertEquals(client.writtenPackets.length, 1);
 });
