@@ -70,9 +70,9 @@ export default abstract class BaseClient {
   incomingBuffer: Uint8Array | null = null;
   resolveConnect: any;
   rejectConnect: any;
-  connectTimer: any;
-  reconnectTimer: any;
-  keepAliveTimer: any;
+  timers: {
+    [key: string]: number | undefined;
+  } = {};
   unacknowledgedPublishes = new Map<
     number,
     {
@@ -219,29 +219,16 @@ export default abstract class BaseClient {
   }
 
   public async disconnect() {
-    if (this.connectTimer) {
-      clearTimeout(this.connectTimer);
-      this.connectTimer = null;
-    }
-
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = null;
-    }
-
-    if (this.keepAliveTimer) {
-      clearTimeout(this.keepAliveTimer);
-      this.keepAliveTimer = null;
-    }
-
     switch (this.connectionState) {
       case 'connected':
         this.changeState('disconnecting');
+        this.stopTimers();
         await this.send({ type: 'disconnect' });
         await this.close();
         break;
       case 'connect-failed':
         this.changeState('disconnected');
+        this.stopTimers();
         break;
       default:
         throw new Error(
@@ -473,9 +460,13 @@ export default abstract class BaseClient {
   }
 
   protected startConnectTimer() {
-    this.connectTimer = setTimeout(() => {
-      this.connectTimedOut();
-    }, this.options.connectTimeout || this.defaultConnectTimeout);
+    this.startTimer(
+      'connect',
+      () => {
+        this.connectTimedOut();
+      },
+      this.options.connectTimeout || this.defaultConnectTimeout
+    );
   }
 
   protected connectTimedOut() {
@@ -497,42 +488,8 @@ export default abstract class BaseClient {
   }
 
   protected stopConnectTimer() {
-    if (this.connectTimer) {
-      clearTimeout(this.connectTimer);
-      this.connectTimer = null;
-    }
-  }
-
-  protected startKeepAliveTimer() {
-    // This method doesn't get called until after receiving the connack packet
-    // so this.lastPacketTime should have a value.
-    const elapsed = Date.now() - this.lastPacketTime!.getTime();
-    const timeout = this.keepAlive * 1000 - elapsed;
-
-    this.keepAliveTimer = setTimeout(() => this.sendKeepAlive(), timeout);
-  }
-
-  protected stopKeepAliveTimer() {
-    if (this.keepAliveTimer) {
-      clearTimeout(this.keepAliveTimer);
-      this.keepAliveTimer = null;
-    }
-  }
-
-  protected sendKeepAlive() {
-    if (this.connectionState === 'connected') {
-      const elapsed = Date.now() - this.lastPacketTime!.getTime();
-      const timeout = this.keepAlive * 1000;
-
-      if (elapsed >= timeout) {
-        this.send({
-          type: 'pingreq',
-        });
-      }
-
-      this.startKeepAliveTimer();
-    } else {
-      this.log('keepAliveTimer should have been cancelled');
+    if (this.timerExists('connect')) {
+      this.stopTimer('connect');
     }
   }
 
@@ -568,9 +525,95 @@ export default abstract class BaseClient {
 
     this.log(`reconnecting in ${delay}ms`);
 
-    this.reconnectTimer = setTimeout(() => {
-      this.connect(true);
-    }, delay);
+    this.startTimer(
+      'reconnect',
+      () => {
+        this.connect(true);
+      },
+      delay
+    );
+  }
+
+  protected stopReconnectTimer() {
+    if (this.timerExists('reconnect')) {
+      this.stopTimer('reconnect');
+    }
+  }
+
+  protected startKeepAliveTimer() {
+    // This method doesn't get called until after receiving the connack packet
+    // so this.lastPacketTime should have a value.
+    const elapsed = Date.now() - this.lastPacketTime!.getTime();
+    const timeout = this.keepAlive * 1000 - elapsed;
+
+    this.startTimer('keepAlive', () => this.sendKeepAlive(), timeout);
+  }
+
+  protected stopKeepAliveTimer() {
+    if (this.timerExists('keepAlive')) {
+      this.stopTimer('keepAlive');
+    }
+  }
+
+  protected sendKeepAlive() {
+    if (this.connectionState === 'connected') {
+      const elapsed = Date.now() - this.lastPacketTime!.getTime();
+      const timeout = this.keepAlive * 1000;
+
+      if (elapsed >= timeout) {
+        this.send({
+          type: 'pingreq',
+        });
+      }
+
+      this.startKeepAliveTimer();
+    } else {
+      this.log('keepAliveTimer should have been cancelled');
+    }
+  }
+
+  protected stopTimers() {
+    this.stopConnectTimer();
+    this.stopReconnectTimer();
+    this.stopKeepAliveTimer();
+  }
+
+  protected startTimer(
+    name: string,
+    cb: (...args: unknown[]) => void,
+    delay: number
+  ) {
+    if (this.timerExists(name)) {
+      this.log(`timer ${name} already exists`);
+
+      this.stopTimer(name);
+    }
+
+    this.log(`starting timer ${name} for ${delay}ms`);
+
+    this.timers[name] = setTimeout(cb, delay);
+  }
+
+  protected stopTimer(name: string) {
+    if (!this.timerExists(name)) {
+      this.log(`no timer ${name} to stop`);
+
+      return;
+    }
+
+    this.log(`stopping timer ${name}`);
+
+    const id = this.timers[name];
+
+    if (id) {
+      clearTimeout(id);
+
+      delete this.timers[name];
+    }
+  }
+
+  protected timerExists(name: string) {
+    return !!this.timers[name];
   }
 
   addUnacknowledgedPublishes(
