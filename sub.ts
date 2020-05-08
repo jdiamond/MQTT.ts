@@ -12,6 +12,7 @@ Options:
  -k/--keep-alive  keep alive in seconds [60]
  -L/--log-level   level to log (info or debug) [info]`);
 }
+
 async function main() {
   const args = parse(Deno.args, {
     boolean: ['help', 'verbose'],

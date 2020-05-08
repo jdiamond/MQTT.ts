@@ -11,6 +11,7 @@ Options:
  -m/--message    message payload
  -L/--log-level  level to log (info or debug) [info]`);
 }
+
 async function main() {
   const args = parse(Deno.args, {
     boolean: ['help', 'retain'],
