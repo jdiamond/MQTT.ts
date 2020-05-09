@@ -98,7 +98,7 @@ export default abstract class BaseClient {
   public constructor(options?: ClientOptions) {
     this.options = options || {};
     this.clientId = this.generateClientId();
-    this.keepAlive = this.options.keepAlive || this.defaultKeepAlive;
+    this.keepAlive = this.options.keepAlive ?? this.defaultKeepAlive;
     this.connectionState = 'never-connected';
     this.reconnectAttempt = 0;
     this.lastPacketId = 0;
@@ -541,7 +541,11 @@ export default abstract class BaseClient {
   }
 
   protected startKeepAliveTimer() {
-    // This method doesn't get called until after receiving the connack packet
+    if (!this.keepAlive) {
+      return;
+    }
+
+    // This method doesn't get called until after sending the connect packet
     // so this.lastPacketTime should have a value.
     const elapsed = Date.now() - this.lastPacketTime!.getTime();
     const timeout = this.keepAlive * 1000 - elapsed;
@@ -555,13 +559,13 @@ export default abstract class BaseClient {
     }
   }
 
-  protected sendKeepAlive() {
+  protected async sendKeepAlive() {
     if (this.connectionState === 'connected') {
       const elapsed = Date.now() - this.lastPacketTime!.getTime();
       const timeout = this.keepAlive * 1000;
 
       if (elapsed >= timeout) {
-        this.send({
+        await this.send({
           type: 'pingreq',
         });
       }
@@ -593,6 +597,9 @@ export default abstract class BaseClient {
 
     this.timers[name] = setTimeout(() => {
       delete this.timers[name];
+
+      this.log(`invoking timer ${name} callback`);
+
       cb();
     }, delay);
   }
