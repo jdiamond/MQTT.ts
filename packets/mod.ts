@@ -31,6 +31,8 @@ export type AnyPacket =
   | PingresPacket
   | DisconnectPacket;
 
+export type AnyPacketWithLength = AnyPacket & { length: number };
+
 export {
   ConnectPacket,
   ConnackPacket,
@@ -94,7 +96,7 @@ export function encode(packet: AnyPacket): Uint8Array {
   return Uint8Array.from(packetType.encode(packet));
 }
 
-export function decode(buffer: Uint8Array): AnyPacket | null {
+export function decode(buffer: Uint8Array): AnyPacketWithLength | null {
   if (buffer.length < 2) {
     return null;
   }
@@ -111,9 +113,17 @@ export function decode(buffer: Uint8Array): AnyPacket | null {
     1
   );
 
-  if (buffer.length < 1 + bytesUsedToEncodeLength + remainingLength) {
+  const packetLength = 1 + bytesUsedToEncodeLength + remainingLength;
+
+  if (buffer.length < packetLength) {
     return null;
   }
 
-  return packetType.decode(buffer, remainingLength);
+  const packet = packetType.decode(buffer, remainingLength);
+
+  const packetWithLength = <AnyPacketWithLength>packet;
+
+  packetWithLength.length = packetLength;
+
+  return packetWithLength;
 }

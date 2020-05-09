@@ -16,6 +16,7 @@ Deno.test('decodeUnsubackPacket', function decodeUnsubackPacket() {
     {
       type: 'unsuback',
       id: 1,
+      length: 4,
     }
   );
 });

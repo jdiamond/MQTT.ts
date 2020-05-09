@@ -25,6 +25,7 @@ Deno.test('decodeDisconnectPacket', function decodeDisconnectPacket() {
     ),
     {
       type: 'disconnect',
+      length: 2,
     }
   );
 });

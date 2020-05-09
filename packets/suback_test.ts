@@ -19,6 +19,7 @@ Deno.test('decodeSubackPacket', function decodeSubackPacket() {
       type: 'suback',
       id: 1,
       returnCodes: [0],
+      length: 5,
     }
   );
 });

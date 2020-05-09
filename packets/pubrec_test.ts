@@ -33,6 +33,7 @@ Deno.test('decodePubrecPacket', function decodePubrecPacket() {
     {
       type: 'pubrec',
       id: 1337,
+      length: 4,
     }
   );
 });

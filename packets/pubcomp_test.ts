@@ -33,6 +33,7 @@ Deno.test('decodePubcompPacket', function decodePubcompPacket() {
     {
       type: 'pubcomp',
       id: 1337,
+      length: 4,
     }
   );
 });

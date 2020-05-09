@@ -35,6 +35,7 @@ Deno.test('decodeConnackPacket', function decodeConnackPacket() {
       type: 'connack',
       sessionPresent: false,
       returnCode: 0,
+      length: 4,
     }
   );
 });
@@ -57,6 +58,7 @@ Deno.test(
         type: 'connack',
         sessionPresent: true,
         returnCode: 0,
+        length: 4,
       }
     );
   }
@@ -80,6 +82,7 @@ Deno.test(
         type: 'connack',
         sessionPresent: false,
         returnCode: 4,
+        length: 4,
       }
     );
   }

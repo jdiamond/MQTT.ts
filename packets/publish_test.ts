@@ -69,6 +69,7 @@ Deno.test('decodePublishPacket', function decodePublishPacket() {
         97, // 'a'
         100, // 'd'
       ]),
+      length: 14,
     }
   );
 });

@@ -25,6 +25,7 @@ Deno.test('decodePingresPacket', function decodePingresPacket() {
     ),
     {
       type: 'pingres',
+      length: 2,
     }
   );
 });

@@ -33,6 +33,7 @@ Deno.test('decodePubackPacket', function decodePubackPacket() {
     {
       type: 'puback',
       id: 1337,
+      length: 4,
     }
   );
 });
