@@ -34,24 +34,53 @@ export default class DenoClient extends BaseClient {
     const bufReader = new BufReader(this.conn);
 
     while (true) {
-      let n = 1;
       let header: Uint8Array | null;
+      // The first byte is for the packet type.
+      let n = 1;
 
-      do {
-        header = await bufReader.peek(++n);
-      } while (n <= 5 && header !== null && (header[n - 1] & 128) !== 0);
+      try {
+        // Peek from 2 to 5 bytes (1 for the packet type plus 1 to 4 for the
+        // length). We stop peeking once the last bytes has bit 7 clear.
+        do {
+          header = await bufReader.peek(++n);
+        } while (header !== null && (header[n - 1] & 128) !== 0 && n < 5);
+      } catch (err) {
+        this.log('caught error calling bufReader.peek');
+        this.connectionClosed();
+        break;
+      }
 
       if (header === null) {
+        // When `peek` returns null, it means we've reached the end of the
+        // stream (the connection was closed).
         this.connectionClosed();
         break;
       } else if (header.length < n) {
+        // When `peek` returns less bytes than we asked for, it also means we've
+        // reached the end of the stream (the connection was closed).
         this.connectionClosed();
         break;
       } else {
         const remainingLength = decodeLength(header, 1);
         const buf = new Uint8Array(n + remainingLength.length);
 
-        bufReader.readFull(buf);
+        try {
+          const result = await bufReader.readFull(buf);
+
+          if (result === null) {
+            // When `readFull` returns null, it means the stream (connection) was
+            // closed with no bytes left in the buffer. We shouldn't have to check
+            // for that because we just peeked at least 2 bytes, but I'm doing it
+            // anyways.
+            this.log('bufReader.readFull returned null');
+            this.connectionClosed();
+            break;
+          }
+        } catch (err) {
+          this.log('caught error calling bufReader.readFull');
+          this.connectionClosed();
+          break;
+        }
 
         this.log('received bytes', buf);
 
