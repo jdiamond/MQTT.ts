@@ -17,7 +17,11 @@ export default {
     ];
   },
 
-  decode(buffer: Uint8Array, _remainingLength: number): ConnackPacket {
+  decode(
+    buffer: Uint8Array,
+    _remainingStart: number,
+    _remainingLength: number
+  ): ConnackPacket {
     const sessionPresent = !!(buffer[2] & 1);
     const returnCode = buffer[3];
 

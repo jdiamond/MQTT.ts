@@ -9,8 +9,12 @@ export default {
     throw new Error('suback.encode is not implemented yet');
   },
 
-  decode(buffer: Uint8Array, remainingLength: number): SubackPacket {
-    const idStart = buffer.length - remainingLength;
+  decode(
+    buffer: Uint8Array,
+    remainingStart: number,
+    _remainingLength: number
+  ): SubackPacket {
+    const idStart = remainingStart;
     const id = (buffer[idStart] << 8) + buffer[idStart + 1];
     const payloadStart = idStart + 2;
     const returnCodes = [];

@@ -47,7 +47,11 @@ export default {
     return [...fixedHeader, ...variableHeader, ...payload];
   },
 
-  decode(buffer: Uint8Array, remainingLength: number): PublishPacket {
+  decode(
+    buffer: Uint8Array,
+    remainingStart: number,
+    remainingLength: number
+  ): PublishPacket {
     const flags = buffer[0] & 0x0f;
 
     const dup = !!(flags & 8);
@@ -58,7 +62,7 @@ export default {
       throw new Error('invalid qos');
     }
 
-    const topicStart = buffer.length - remainingLength;
+    const topicStart = remainingStart;
     const decodedTopic = decodeUTF8String(buffer, topicStart);
     const topic = decodedTopic.value;
 
@@ -73,7 +77,10 @@ export default {
       payloadStart += 2;
     }
 
-    const payload = buffer.slice(payloadStart);
+    const payload = buffer.slice(
+      payloadStart,
+      remainingStart + remainingLength
+    );
 
     return {
       type: 'publish',

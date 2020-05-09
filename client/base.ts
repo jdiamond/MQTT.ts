@@ -2,6 +2,7 @@ import {
   encode,
   decode,
   AnyPacket,
+  AnyPacketWithLength,
   ConnackPacket,
   PublishPacket,
   PubackPacket,
@@ -67,7 +68,7 @@ export default abstract class BaseClient {
   reconnectAttempt: number;
   lastPacketId: number;
   lastPacketTime: Date | undefined;
-  incomingBuffer: Uint8Array | null = null;
+  buffer: Uint8Array | null = null;
   resolveConnect: any;
   rejectConnect: any;
   timers: {
@@ -316,24 +317,34 @@ export default abstract class BaseClient {
     this.log('connectionError', error);
   }
 
-  protected bytesReceived(buffer: Uint8Array) {
-    this.emit('bytesreceived', buffer);
+  protected bytesReceived(bytes: Uint8Array) {
+    this.log('bytes received', bytes);
 
-    const bytes = this.incomingBuffer
-      ? Uint8Array.from([...this.incomingBuffer, ...buffer])
-      : buffer;
+    this.emit('bytesreceived', bytes);
 
-    const packet = this.decode(bytes);
+    let buffer: Uint8Array | null = this.buffer
+      ? Uint8Array.from([...this.buffer, ...bytes])
+      : bytes;
 
-    if (packet) {
+    do {
+      const packet = this.decode(buffer);
+
+      if (!packet) {
+        break;
+      }
+
       this.log(`received ${packet.type} packet`, packet);
 
       this.packetReceived(packet);
 
-      this.incomingBuffer = null;
-    } else {
-      this.incomingBuffer = bytes;
-    }
+      if (packet.length < buffer.length) {
+        buffer = buffer.slice(packet.length);
+      } else {
+        buffer = null;
+      }
+    } while (buffer);
+
+    this.buffer = buffer;
   }
 
   protected packetReceived(packet: AnyPacket) {
@@ -696,7 +707,7 @@ export default abstract class BaseClient {
     return encode(packet);
   }
 
-  protected decode(bytes: Uint8Array): AnyPacket | null {
+  protected decode(bytes: Uint8Array): AnyPacketWithLength | null {
     return decode(bytes);
   }
 

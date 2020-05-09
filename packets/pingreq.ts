@@ -10,7 +10,11 @@ export default {
     return [(packetType << 4) + flags, 0];
   },
 
-  decode(_buffer: Uint8Array, _remainingLength: number): PingreqPacket {
+  decode(
+    _buffer: Uint8Array,
+    _remainingStart: number,
+    _remainingLength: number
+  ): PingreqPacket {
     return {
       type: 'pingreq',
     };

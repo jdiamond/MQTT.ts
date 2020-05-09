@@ -119,7 +119,15 @@ export function decode(buffer: Uint8Array): AnyPacketWithLength | null {
     return null;
   }
 
-  const packet = packetType.decode(buffer, remainingLength);
+  const packet = packetType.decode(
+    buffer,
+    1 + bytesUsedToEncodeLength,
+    remainingLength
+  );
+
+  if (!packet) {
+    return null;
+  }
 
   const packetWithLength = <AnyPacketWithLength>packet;
 

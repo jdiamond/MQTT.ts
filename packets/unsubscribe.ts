@@ -28,7 +28,11 @@ export default {
     return [...fixedHeader, ...variableHeader, ...payload];
   },
 
-  decode(_buffer: Uint8Array, _remainingLength: number): UnsubscribePacket {
+  decode(
+    _buffer: Uint8Array,
+    _remainingStart: number,
+    _remainingLength: number
+  ): UnsubscribePacket {
     throw new Error('unsubscribe.decode is not implemented yet');
   },
 };

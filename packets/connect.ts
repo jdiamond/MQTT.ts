@@ -70,8 +70,12 @@ export default {
     return [...fixedHeader, ...variableHeader, ...payload];
   },
 
-  decode(buffer: Uint8Array, remainingLength: number): ConnectPacket {
-    const protocolNameStart = buffer.length - remainingLength;
+  decode(
+    buffer: Uint8Array,
+    remainingStart: number,
+    _remainingLength: number
+  ): ConnectPacket {
+    const protocolNameStart = remainingStart;
     const protocolName = decodeUTF8String(buffer, protocolNameStart);
 
     const protocolLevelIndex = protocolNameStart + protocolName.length;
