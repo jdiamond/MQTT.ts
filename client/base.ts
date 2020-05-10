@@ -87,10 +87,10 @@ export default abstract class BaseClient {
   // TODO: combine these into one defaults property?
   defaultClientIdPrefix: string = 'mqttts';
   defaultConnectTimeout: number = 10 * 1000;
-  defaultKeepAlive: number = 45;
+  defaultKeepAlive: number = 60;
   defaultReconnectOptions: DefaultReconnectOptions = {
     min: 1000,
-    factor: 2,
+    factor: 1.1,
     random: true,
     max: 60000,
     attempts: Infinity,
@@ -99,7 +99,10 @@ export default abstract class BaseClient {
   public constructor(options?: ClientOptions) {
     this.options = options || {};
     this.clientId = this.generateClientId();
-    this.keepAlive = this.options.keepAlive ?? this.defaultKeepAlive;
+    this.keepAlive =
+      typeof this.options.keepAlive === 'number'
+        ? this.options.keepAlive
+        : this.defaultKeepAlive;
     this.connectionState = 'never-connected';
     this.reconnectAttempt = 0;
     this.lastPacketId = 0;
@@ -133,11 +136,6 @@ export default abstract class BaseClient {
       await this.open();
 
       await this.connectionOpened();
-
-      this.startReading().then(
-        () => {},
-        () => {}
-      );
     } catch (err) {
       this.connectionFailed();
     }
@@ -242,8 +240,6 @@ export default abstract class BaseClient {
 
   protected abstract async open(): Promise<void>;
 
-  protected abstract async startReading(): Promise<void>;
-
   protected abstract async write(bytes: Uint8Array): Promise<void>;
 
   protected abstract async close(): Promise<void>;
@@ -322,9 +318,20 @@ export default abstract class BaseClient {
 
     this.emit('bytesreceived', bytes);
 
-    let buffer: Uint8Array | null = this.buffer
-      ? Uint8Array.from([...this.buffer, ...bytes])
-      : bytes;
+    let buffer: Uint8Array | null = bytes;
+
+    const oldBuffer = this.buffer;
+
+    if (oldBuffer) {
+      const newBuffer = new Uint8Array(oldBuffer.length + bytes.length);
+
+      newBuffer.set(oldBuffer);
+      newBuffer.set(bytes, oldBuffer.length);
+
+      buffer = newBuffer;
+    } else {
+      buffer = bytes;
+    }
 
     do {
       const packet = this.decode(buffer);

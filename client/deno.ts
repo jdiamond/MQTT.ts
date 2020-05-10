@@ -2,15 +2,16 @@ import BaseClient, { ClientOptions } from './base.ts';
 import * as log from 'https://deno.land/std/log/mod.ts';
 import { Logger, LogRecord } from 'https://deno.land/std/log/logger.ts';
 import { LevelName } from 'https://deno.land/std/log/levels.ts';
-import { decodeLength } from '../packets/length.ts';
-import { BufReader } from 'https://deno.land/std/io/bufio.ts';
 
 export type DenoClientOptions = ClientOptions & {
   logger?: Logger;
 };
 
+const DEFAULT_BUF_SIZE = 4096;
+
 export default class DenoClient extends BaseClient {
   private conn: Deno.Conn | undefined;
+  private closed = false;
   private logger: Logger;
 
   constructor(options: DenoClientOptions) {
@@ -20,73 +21,54 @@ export default class DenoClient extends BaseClient {
   }
 
   protected async open() {
-    this.conn = await Deno.connect({
+    const conn = await Deno.connect({
       hostname: this.options.host || 'localhost',
       port: this.options.port || 1883,
     });
-  }
 
-  protected async startReading() {
-    if (!this.conn) {
-      throw new Error('no connection');
-    }
+    this.conn = conn;
+    this.closed = false;
 
-    const bufReader = new BufReader(this.conn);
+    // This loops forever (until the connection is closed) so it gets invoked
+    // without `await` so it doesn't block opening the connection.
+    (async () => {
+      const buffer = new Uint8Array(DEFAULT_BUF_SIZE);
 
-    while (true) {
-      let header: Uint8Array | null;
-      // The first byte is for the packet type.
-      let n = 1;
-
-      try {
-        // Peek from 2 to 5 bytes (1 for the packet type plus 1 to 4 for the
-        // length). We stop peeking once the last bytes has bit 7 clear.
-        do {
-          header = await bufReader.peek(++n);
-        } while (header !== null && (header[n - 1] & 128) !== 0 && n < 5);
-      } catch (err) {
-        this.log('caught error calling bufReader.peek');
-        this.connectionClosed();
-        break;
-      }
-
-      if (header === null) {
-        // When `peek` returns null, it means we've reached the end of the
-        // stream (the connection was closed).
-        this.connectionClosed();
-        break;
-      } else if (header.length < n) {
-        // When `peek` returns less bytes than we asked for, it also means we've
-        // reached the end of the stream (the connection was closed).
-        this.connectionClosed();
-        break;
-      } else {
-        const remainingLength = decodeLength(header, 1);
-        const buf = new Uint8Array(n + remainingLength.length);
+      while (true) {
+        let bytesRead = null;
 
         try {
-          const result = await bufReader.readFull(buf);
+          this.log('reading');
 
-          if (result === null) {
-            // When `readFull` returns null, it means the stream (connection) was
-            // closed with no bytes left in the buffer. We shouldn't have to check
-            // for that because we just peeked at least 2 bytes, but I'm doing it
-            // anyways.
-            this.log('bufReader.readFull returned null');
-            this.connectionClosed();
-            break;
-          }
+          bytesRead = await conn.read(buffer);
         } catch (err) {
-          this.log('caught error calling bufReader.readFull');
-          this.connectionClosed();
+          if (this.closed && err.name === 'BadResource') {
+            // Not sure why this exception gets thrown after closing the
+            // connection. See my issue at
+            // https://github.com/denoland/deno/issues/5194.
+          } else {
+            this.log('caught error while reading', err);
+
+            this.connectionClosed();
+          }
+
           break;
         }
 
-        this.log('received bytes', buf);
+        if (bytesRead === null) {
+          this.log('read stream closed');
 
-        this.bytesReceived(buf);
+          this.connectionClosed();
+
+          break;
+        }
+
+        this.bytesReceived(buffer.slice(0, bytesRead));
       }
-    }
+    })().then(
+      () => {},
+      () => {}
+    );
   }
 
   protected async write(bytes: Uint8Array) {
@@ -103,6 +85,8 @@ export default class DenoClient extends BaseClient {
     if (!this.conn) {
       throw new Error('no connection');
     }
+
+    this.closed = true;
 
     this.conn.close();
   }
