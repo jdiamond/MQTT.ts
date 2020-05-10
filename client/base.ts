@@ -25,19 +25,11 @@ export type ClientOptions = {
 };
 
 export type ReconnectOptions = {
-  min?: number;
+  retries?: number;
+  minDelay?: number;
+  maxDelay?: number;
   factor?: number;
   random?: boolean;
-  max?: number;
-  attempts?: number;
-};
-
-export type DefaultReconnectOptions = {
-  min: number;
-  factor: number;
-  random: boolean;
-  max: number;
-  attempts: number;
 };
 
 export type PublishOptions = {
@@ -88,12 +80,12 @@ export default abstract class BaseClient {
   defaultClientIdPrefix: string = 'mqttts';
   defaultConnectTimeout: number = 10 * 1000;
   defaultKeepAlive: number = 60;
-  defaultReconnectOptions: DefaultReconnectOptions = {
-    min: 1000,
+  defaultReconnectOptions = {
+    retries: Infinity,
+    minDelay: 1000,
+    maxDelay: 60000,
     factor: 1.1,
     random: true,
-    max: 60000,
-    attempts: Infinity,
   };
 
   public constructor(options?: ClientOptions) {
@@ -518,30 +510,39 @@ export default abstract class BaseClient {
       return;
     }
 
-    const defaultReconnectOptions = this.defaultReconnectOptions;
-
     const reconnectOptions =
-      typeof options.reconnect === 'object'
-        ? options.reconnect
-        : defaultReconnectOptions;
+      typeof options.reconnect === 'object' ? options.reconnect : {};
+    const defaultReconnectOptions = this.defaultReconnectOptions;
 
     const attempt = this.reconnectAttempt;
     const maxAttempts =
-      reconnectOptions.attempts || defaultReconnectOptions.attempts;
+      reconnectOptions.retries ?? defaultReconnectOptions.retries;
 
     if (attempt >= maxAttempts) {
       return;
     }
 
+    // I started off using the formula in this article
     // https://dthain.blogspot.com/2009/02/exponential-backoff-in-distributed.html
-    const min = reconnectOptions.min || defaultReconnectOptions.min;
-    const factor = reconnectOptions.factor || defaultReconnectOptions.factor;
-    const random = 1 + (reconnectOptions.random ? Math.random() : 0);
-    const max = reconnectOptions.max || defaultReconnectOptions.max;
+    // but modified the random part so that the delay will be strictly
+    // increasing.
+    const min = reconnectOptions.minDelay ?? defaultReconnectOptions.minDelay;
+    const max = reconnectOptions.maxDelay ?? defaultReconnectOptions.maxDelay;
+    const factor = reconnectOptions.factor ?? defaultReconnectOptions.factor;
+    const random = reconnectOptions.random ?? defaultReconnectOptions.random;
 
-    const delay = Math.min(min * Math.pow(factor, attempt) * random, max);
+    // The old way:
+    // const randomness = 1 + (random ? Math.random() : 0);
+    // const delay = Math.floor(Math.min(randomness * min * Math.pow(factor, attempt), max));
 
-    this.log(`reconnecting in ${delay}ms`);
+    // The new way:
+    const thisDelay = min * Math.pow(factor, attempt);
+    const nextDelay = min * Math.pow(factor, attempt + 1);
+    const diff = nextDelay - thisDelay;
+    const randomness = random ? diff * Math.random() : 0;
+    const delay = Math.floor(Math.min(thisDelay + randomness, max));
+
+    this.log(`reconnect attempt ${attempt + 1} in ${delay}ms`);
 
     this.startTimer(
       'reconnect',
