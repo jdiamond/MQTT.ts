@@ -26,17 +26,16 @@ Protocol: https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html
 
 ## Deno
 
-The "raw" TypeScript files are import'able by Deno.
+The "raw" TypeScript files are import'able by Deno. The package.json file and the Node.js dependencies are only used to make the Node.js and browser builds.
 
-Look in pub.ts to see an example of using the client.
+Look in pub.ts and sub.ts to see examples of using the client.
 
 ## Node.js
 
 A Node.js build can be made like this:
 
 ```
-deno bundle client/node.ts > node.mjs
-npx rollup node.mjs --file node.cjs --format cjs
+npm run build:node
 ```
 
 Look in node-pub.js to see an example of using it.
@@ -46,8 +45,7 @@ Look in node-pub.js to see an example of using it.
 A browser build can be made like this:
 
 ```
-deno bundle client/browser.ts > browser.js
-npx terser -o browser.min.js browser.js
+npm run build:browser
 ```
 
 Look in index.html to see an example of using it.

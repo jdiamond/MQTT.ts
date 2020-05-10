@@ -1,6 +1,6 @@
-import BaseClient, { ClientOptions } from './base.ts';
+import { BaseClient, BaseClientOptions } from './base.ts';
 
-export type NodeClientOptions = ClientOptions & {};
+export type ClientOptions = BaseClientOptions & {};
 
 declare function require(moduleName: 'net'): Net;
 declare interface Net {
@@ -18,10 +18,10 @@ declare interface Socket {
 
 const net = require('net');
 
-export default class NodeClient extends BaseClient {
+export class Client extends BaseClient {
   private socket: Socket | undefined;
 
-  constructor(options: NodeClientOptions) {
+  constructor(options: ClientOptions) {
     super(options);
   }
 

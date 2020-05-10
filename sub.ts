@@ -1,5 +1,5 @@
 import { parse } from 'https://deno.land/std/flags/mod.ts';
-import DenoClient, { setupLogger } from './client/deno.ts';
+import { Client, setupLogger } from './mod.ts';
 
 function usage() {
   console.log(`Usage: sub.ts -h localhost -p 1883 -t "topic/pattern/to/subscribe/to/#" -v
@@ -44,7 +44,7 @@ async function main() {
 
   const logger = await setupLogger(levelName);
 
-  const client = new DenoClient({
+  const client = new Client({
     host: args.host,
     port: args.port,
     keepAlive: args['keep-alive'],

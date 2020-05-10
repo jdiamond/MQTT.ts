@@ -1,5 +1,5 @@
 import { assertEquals } from 'https://deno.land/std/testing/asserts.ts';
-import BaseClient from './base.ts';
+import { BaseClient } from './base.ts';
 import { encode, decode, AnyPacket, PublishPacket } from '../packets/mod.ts';
 
 class TestClient extends BaseClient {
@@ -259,7 +259,7 @@ Deno.test('client can receive bytes for multiple packets at once', async () => {
   ]);
 
   client.receiveBytes(bytes);
-console.log(client.receivedPackets);
+  console.log(client.receivedPackets);
 
   assertEquals(client.receivedPackets.length, 3);
   assertEquals(client.receivedPackets[1].type, 'publish');

@@ -1,6 +1,6 @@
-import BaseClient, { ClientOptions } from './base.ts';
+import { BaseClient, BaseClientOptions } from './base.ts';
 
-export type BrowserClientOptions = ClientOptions & {};
+export type ClientOptions = BaseClientOptions & {};
 
 declare class WebSocket {
   constructor(url: string, protocol: string);
@@ -13,10 +13,10 @@ declare class WebSocket {
   close(): void;
 }
 
-export default class BrowserClient extends BaseClient {
+export class Client extends BaseClient {
   private ws: WebSocket | undefined;
 
-  constructor(options: BrowserClientOptions) {
+  constructor(options: ClientOptions) {
     super(options);
   }
 

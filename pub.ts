@@ -1,5 +1,5 @@
 import { parse } from 'https://deno.land/std/flags/mod.ts';
-import DenoClient, { setupLogger } from './client/deno.ts';
+import { Client, setupLogger } from './mod.ts';
 
 function usage() {
   console.log(`Usage: pub.ts -h localhost -p 1883 -t topic/to/publish/to -m "message to publish"
@@ -58,7 +58,7 @@ async function main() {
 
   const logger = await setupLogger(levelName);
 
-  const client = new DenoClient({
+  const client = new Client({
     host: args.host,
     port: args.port,
     logger,

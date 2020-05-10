@@ -1,5 +1,11 @@
+/node_modules
+
+# Node.js build:
+/index.mjs
+/index.js
+
+# Browser build:
+/browser.mjs
+/browser.min.mjs
 /browser.js
 /browser.min.js
-/node_modules
-/node.cjs
-/node.mjs

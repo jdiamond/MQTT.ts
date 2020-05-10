@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const NodeClient = require('./node.cjs');
+const { Client } = require('./index.js');
 
 function usage() {
   console.log(`Usage: node-pub.js -h localhost -p 1883 -t topic/to/publish/to -m "message to publish"
@@ -63,7 +63,7 @@ async function main() {
     retain: false,
   };
 
-  const client = new NodeClient({
+  const client = new Client({
     host: args.host,
     port: args.port,
   });

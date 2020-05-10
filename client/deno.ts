@@ -1,20 +1,20 @@
-import BaseClient, { ClientOptions } from './base.ts';
+import { BaseClient, BaseClientOptions } from './base.ts';
 import * as log from 'https://deno.land/std/log/mod.ts';
 import { Logger, LogRecord } from 'https://deno.land/std/log/logger.ts';
 import { LevelName } from 'https://deno.land/std/log/levels.ts';
 
-export type DenoClientOptions = ClientOptions & {
+export type ClientOptions = BaseClientOptions & {
   logger?: Logger;
 };
 
 const DEFAULT_BUF_SIZE = 4096;
 
-export default class DenoClient extends BaseClient {
+export class Client extends BaseClient {
   private conn: Deno.Conn | undefined;
   private closed = false;
   private logger: Logger;
 
-  constructor(options: DenoClientOptions) {
+  constructor(options: ClientOptions) {
     super(options);
 
     this.logger = options.logger || log.getLogger();

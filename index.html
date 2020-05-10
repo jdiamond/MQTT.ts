@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MQTT.ts BrowserClient</title>
+    <title>MQTT.ts Browser Test</title>
   </head>
   <body>
     <script type="module">
-      import BrowserClient from './browser.min.js';
+      import { Client } from './browser.mjs';
 
       async function main() {
-        const client = new BrowserClient({ host: 'localhost', port: 9001 });
+        const client = new Client({ host: 'localhost', port: 9001 });
 
         const decoder = new TextDecoder('utf-8');
         const messages = document.getElementById('messages');

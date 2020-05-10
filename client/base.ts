@@ -13,7 +13,7 @@ import {
   UnsubackPacket,
 } from '../packets/mod.ts';
 
-export type ClientOptions = {
+export type BaseClientOptions = {
   host?: string;
   port?: number;
   clientId?: string | Function;
@@ -51,8 +51,8 @@ type ConnectionStates =
 
 const packetIdLimit = 2 ** 16;
 
-export default abstract class BaseClient {
-  options: ClientOptions;
+export abstract class BaseClient {
+  options: BaseClientOptions;
   clientId: string;
   keepAlive: number;
   connectionState: ConnectionStates;
@@ -88,7 +88,7 @@ export default abstract class BaseClient {
     random: true,
   };
 
-  public constructor(options?: ClientOptions) {
+  public constructor(options?: BaseClientOptions) {
     this.options = options || {};
     this.clientId = this.generateClientId();
     this.keepAlive =
