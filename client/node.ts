@@ -19,7 +19,7 @@ declare interface Socket {
 const net = require('net');
 
 export class Client extends BaseClient {
-  private socket: Socket | undefined;
+  private socket: Socket | null = null;
 
   constructor(options: ClientOptions) {
     super(options);
@@ -56,9 +56,11 @@ export class Client extends BaseClient {
       });
 
       socket.on('data', (bytes: Uint8Array) => {
-        this.log('received bytes', bytes);
-
         this.bytesReceived(bytes);
+      });
+
+      socket.on('end', () => {
+        this.connectionClosed();
       });
     });
   }
@@ -97,7 +99,11 @@ export class Client extends BaseClient {
       throw new Error('no connection');
     }
 
+    // Afer this method gets called, the listener for the end event added in the
+    // open method will get called.
     this.socket.end();
+
+    this.socket = null;
   }
 
   protected log(msg: string, ...args: unknown[]) {

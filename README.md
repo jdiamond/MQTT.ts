@@ -58,3 +58,4 @@ Look in index.html to see an example of using it.
 - async iterators for messages matching topic patterns
 - api docs
 - npm package
+- queue messages while not online

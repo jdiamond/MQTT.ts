@@ -56,7 +56,6 @@ export abstract class BaseClient {
   clientId: string;
   keepAlive: number;
   connectionState: ConnectionStates;
-  connectionCount: number = 0;
   reconnectAttempt: number;
   lastPacketId: number;
   lastPacketTime: Date | undefined;
@@ -102,7 +101,7 @@ export abstract class BaseClient {
 
   // Public methods
 
-  public async connect(reconnecting?: boolean): Promise<ConnackPacket | null> {
+  public async connect(): Promise<ConnackPacket | null> {
     switch (this.connectionState) {
       case 'never-connected':
       case 'connect-failed':
@@ -115,9 +114,7 @@ export abstract class BaseClient {
         );
     }
 
-    this.connectionCount = 0;
-
-    this.changeState(reconnecting ? 'reconnecting' : 'connecting');
+    this.changeState('connecting');
 
     const deferred = new Promise<ConnackPacket>((resolve, reject) => {
       this.resolveConnect = resolve;
@@ -133,6 +130,30 @@ export abstract class BaseClient {
     }
 
     return deferred;
+  }
+
+  // Same thing as connect but resolves immediately instead of when the
+  // connection is fully established (when CONNACK is received).
+  private async reconnect() {
+    switch (this.connectionState) {
+      case 'connect-failed':
+      case 'offline':
+        break;
+      default:
+        throw new Error(
+          `should not be connecting in ${this.connectionState} state`
+        );
+    }
+
+    this.changeState('reconnecting');
+
+    try {
+      await this.open();
+
+      await this.connectionOpened();
+    } catch (err) {
+      this.connectionFailed();
+    }
   }
 
   public async publish(
@@ -393,11 +414,14 @@ export abstract class BaseClient {
 
     this.changeState('connected');
 
-    if (this.connectionCount === 0 && this.resolveConnect) {
-      this.resolveConnect(packet);
-    }
+    if (this.resolveConnect) {
+      this.log('resolving initial connect');
 
-    this.connectionCount++;
+      this.resolveConnect(packet);
+
+      this.resolveConnect = null;
+      this.rejectConnect = null;
+    }
 
     this.stopConnectTimer();
     this.startKeepAliveTimer();
@@ -481,14 +505,17 @@ export abstract class BaseClient {
 
   protected connectTimedOut() {
     if (this.connectionState !== 'connected') {
-      const wasConnecting = this.connectionState === 'connecting';
-
       this.changeState('connect-failed');
 
-      if (wasConnecting) {
+      if (this.rejectConnect) {
         this.reconnectAttempt = 0;
 
+        this.log('rejecting initial connect');
+
         this.rejectConnect(new Error('connect timed out'));
+
+        this.resolveConnect = null;
+        this.rejectConnect = null;
       }
 
       this.startReconnectTimer();
@@ -547,7 +574,7 @@ export abstract class BaseClient {
     this.startTimer(
       'reconnect',
       () => {
-        this.connect(true);
+        this.reconnect();
       },
       delay
     );

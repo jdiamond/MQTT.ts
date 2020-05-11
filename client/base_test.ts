@@ -1,17 +1,33 @@
 import { assertEquals } from 'https://deno.land/std/testing/asserts.ts';
-import { BaseClient } from './base.ts';
+import { BaseClient, BaseClientOptions } from './base.ts';
 import { encode, decode, AnyPacket, PublishPacket } from '../packets/mod.ts';
+
+type TestClientOptions = BaseClientOptions & {
+  openRejects?: number;
+};
 
 class TestClient extends BaseClient {
   sentPackets: AnyPacket[] = [];
   receivedPackets: AnyPacket[] = [];
   timerCallbacks: { [key: string]: Function } = {};
+  openRejects?: number;
+  openCalls: number = 0;
+
+  constructor(options: TestClientOptions = {}) {
+    super(options);
+
+    this.openRejects = options.openRejects;
+  }
 
   // These methods must be overridden by BaseClient subclasses:
 
-  async open() {}
+  async open() {
+    this.openCalls++;
 
-  async startReading() {}
+    if (this.openRejects && this.openCalls <= this.openRejects) {
+      throw new Error('nope');
+    }
+  }
 
   async write(bytes: Uint8Array) {
     const packet = decode(bytes);
@@ -138,7 +154,7 @@ Deno.test('open throws', async () => {
 Deno.test('waiting for connack times out', async () => {
   const client = new TestClient({ connectTimeout: 5 });
 
-  client.connect();
+  client.connect().catch(() => {});
 
   assertEquals(client.connectionState, 'connecting');
 
@@ -259,11 +275,53 @@ Deno.test('client can receive bytes for multiple packets at once', async () => {
   ]);
 
   client.receiveBytes(bytes);
-  console.log(client.receivedPackets);
 
   assertEquals(client.receivedPackets.length, 3);
   assertEquals(client.receivedPackets[1].type, 'publish');
   assertEquals((client.receivedPackets[1] as PublishPacket).topic, 'topic1');
   assertEquals(client.receivedPackets[2].type, 'publish');
   assertEquals((client.receivedPackets[2] as PublishPacket).topic, 'topic2');
+});
+
+Deno.test('connect resolves on the first successful connection', async () => {
+  const client = new TestClient({ openRejects: 1 });
+
+  let connectResolved = false;
+
+  client.connect().then(() => {
+    connectResolved = true;
+  });
+
+  assertEquals(client.connectionState, 'connecting');
+
+  // Sleep a little to allow open to reject.
+  await sleep(1);
+
+  assertEquals(client.connectionState, 'connect-failed');
+  assertEquals(connectResolved, false);
+
+  client.triggerTimer('reconnect');
+
+  assertEquals(client.connectionState, 'reconnecting');
+
+  // Sleep a little to allow the connect packet to be sent.
+  await sleep(1);
+
+  assertEquals(client.sentPackets[0].type, 'connect');
+  assertEquals(client.connectionState, 'waiting-for-connack');
+  assertEquals(connectResolved, false);
+
+  client.receivePacket({
+    type: 'connack',
+    returnCode: 0,
+    sessionPresent: false,
+  });
+
+  assertEquals(connectResolved, false);
+
+  // Sleep a little to allow the connect promise to resolve.
+  await sleep(1);
+
+  assertEquals(connectResolved, true);
+  assertEquals(client.connectionState, 'connected');
 });
