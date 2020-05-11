@@ -42,7 +42,6 @@ type ConnectionStates =
   | 'never-connected'
   | 'connecting'
   | 'waiting-for-connack'
-  | 'connect-failed'
   | 'connected'
   | 'offline'
   | 'reconnecting'
@@ -104,7 +103,6 @@ export abstract class BaseClient {
   public async connect(): Promise<ConnackPacket | null> {
     switch (this.connectionState) {
       case 'never-connected':
-      case 'connect-failed':
       case 'offline':
       case 'disconnected':
         break;
@@ -136,7 +134,6 @@ export abstract class BaseClient {
   // connection is fully established (when CONNACK is received).
   private async reconnect() {
     switch (this.connectionState) {
-      case 'connect-failed':
       case 'offline':
         break;
       default:
@@ -238,7 +235,7 @@ export abstract class BaseClient {
         await this.send({ type: 'disconnect' });
         await this.close();
         break;
-      case 'connect-failed':
+      case 'offline':
         this.changeState('disconnected');
         this.stopTimers();
         break;
@@ -278,47 +275,44 @@ export abstract class BaseClient {
   protected connectionFailed() {
     this.log('connectionFailed');
 
-    this.stopConnectTimer();
-
     switch (this.connectionState) {
       case 'connecting':
       case 'reconnecting':
-        if (this.connectionState === 'connecting') {
-          this.reconnectAttempt = 0;
-        } else {
-          this.reconnectAttempt++;
-        }
-
-        this.changeState('connect-failed');
-        this.startReconnectTimer();
-
         break;
       default:
         throw new Error(
           `connecting should not have failed in ${this.connectionState} state`
         );
     }
+
+    this.changeState('offline');
+
+    if (this.connectionState === 'connecting') {
+      this.reconnectAttempt = 0;
+    } else {
+      this.reconnectAttempt++;
+    }
+
+    if (!this.startReconnectTimer()) {
+      this.notifyConnectRejected(new Error('connection failed'));
+    }
   }
 
   protected connectionClosed() {
     this.log('connectionClosed');
 
-    this.stopKeepAliveTimer();
-
     switch (this.connectionState) {
       case 'disconnecting':
         this.changeState('disconnected');
         break;
-      case 'connected':
+      default:
         this.changeState('offline');
         this.reconnectAttempt = 0;
         this.startReconnectTimer();
         break;
-      default:
-        throw new Error(
-          `connection should not be closing in ${this.connectionState} state`
-        );
     }
+
+    this.stopKeepAliveTimer();
   }
 
   protected connectionError(error: any) {
@@ -504,23 +498,34 @@ export abstract class BaseClient {
   }
 
   protected connectTimedOut() {
-    if (this.connectionState !== 'connected') {
-      this.changeState('connect-failed');
+    switch (this.connectionState) {
+      case 'waiting-for-connack':
+        break;
+      default:
+        throw new Error(
+          `connect timer should time out in ${this.connectionState} state`
+        );
+    }
 
-      if (this.rejectConnect) {
-        this.reconnectAttempt = 0;
+    this.changeState('offline');
 
-        this.log('rejecting initial connect');
+    this.close();
 
-        this.rejectConnect(new Error('connect timed out'));
+    this.notifyConnectRejected(new Error('connect timed out'));
 
-        this.resolveConnect = null;
-        this.rejectConnect = null;
-      }
+    this.reconnectAttempt = 0;
 
-      this.startReconnectTimer();
-    } else {
-      this.log('connectTimer should have been cancelled');
+    this.startReconnectTimer();
+  }
+
+  protected notifyConnectRejected(err: Error) {
+    if (this.rejectConnect) {
+      this.log('rejecting initial connect');
+
+      this.rejectConnect(err);
+
+      this.resolveConnect = null;
+      this.rejectConnect = null;
     }
   }
 
@@ -546,7 +551,7 @@ export abstract class BaseClient {
       reconnectOptions.retries ?? defaultReconnectOptions.retries;
 
     if (attempt >= maxAttempts) {
-      return;
+      return false;
     }
 
     // I started off using the formula in this article
@@ -578,6 +583,8 @@ export abstract class BaseClient {
       },
       delay
     );
+
+    return true;
   }
 
   protected stopReconnectTimer() {
