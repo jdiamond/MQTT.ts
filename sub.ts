@@ -2,12 +2,13 @@ import { parse } from 'https://deno.land/std/flags/mod.ts';
 import { Client, setupLogger } from './mod.ts';
 
 function usage() {
-  console.log(`Usage: sub.ts -h localhost -p 1883 -t "topic/pattern/to/subscribe/to/#" -v
+  console.log(`Usage: sub.ts -h localhost -p 1883 -t "topic/#" -v
 
 Options:
  -h/--host        broker host [localhost]
  -p/--port        broker port [1883]
- -t/--topic       topic pattern to subscribe to [#]
+ -t/--topic       topic filter (can be multiple) [#]
+ -q/--qos         qos [0]
  -v/--verbose     print topic before message [false]
  -k/--keep-alive  keep alive in seconds [60]
  -L/--log-level   level to log (info or debug) [info]`);
@@ -30,6 +31,7 @@ async function main() {
       host: 'localhost',
       port: 1883,
       topic: '#',
+      qos: 0,
       verbose: false,
       'keep-alive': 60,
     },
@@ -62,10 +64,10 @@ async function main() {
 
   logger.info(`connected to ${args.host}:${args.port}`);
 
-  const suback = await client.subscribe(args.topic);
+  const suback = await client.subscribe(args.topic, args.qos);
 
   if (suback) {
-    logger.info(`received suback for topic ${null}`);
+    logger.info(`received suback for topic ${args.topic}`);
   }
 }
 

@@ -32,10 +32,17 @@ export type ReconnectOptions = {
   random?: boolean;
 };
 
+export type QoS = 0 | 1 | 2;
+
 export type PublishOptions = {
   dup?: boolean;
-  qos?: 0 | 1 | 2;
+  qos?: QoS;
   retain?: boolean;
+};
+
+export type Subscription = {
+  topic: string;
+  qos?: QoS;
 };
 
 type ConnectionStates =
@@ -189,8 +196,8 @@ export abstract class BaseClient {
   }
 
   public async subscribe(
-    topic: string,
-    qos?: 0 | 1 | 2
+    topic: Subscription | string | (Subscription | string)[],
+    qos?: QoS
   ): Promise<SubackPacket | void> {
     switch (this.connectionState) {
       case 'connected':
@@ -201,10 +208,18 @@ export abstract class BaseClient {
         );
     }
 
+    const arr = Array.isArray(topic) ? topic : [topic];
+
+    const subs = arr.map((sub) => {
+      return typeof sub === 'object'
+        ? { topic: sub.topic, qos: sub.qos || qos || <QoS>0 }
+        : { topic: sub, qos: qos || <QoS>0 };
+    });
+
     await this.send({
       type: 'subscribe',
       id: this.nextPacketId(),
-      subscriptions: [{ topic, qos: qos || 0 }],
+      subscriptions: subs,
     });
 
     // TODO: wait for suback here?
@@ -256,6 +271,7 @@ export abstract class BaseClient {
 
   // Methods that can be overridden by subclasses
 
+  // This gets called after open succeeds.
   protected async connectionOpened() {
     this.log('connectionOpened');
 
@@ -272,6 +288,7 @@ export abstract class BaseClient {
     this.startConnectTimer();
   }
 
+  // This gets called if open or connectionOpened throws.
   protected connectionFailed() {
     this.log('connectionFailed');
 
@@ -298,6 +315,7 @@ export abstract class BaseClient {
     }
   }
 
+  // This gets by subclasses when the connection is unexpectedly closed.
   protected connectionClosed() {
     this.log('connectionClosed');
 

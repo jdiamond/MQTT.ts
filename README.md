@@ -59,3 +59,4 @@ Look in index.html to see an example of using it.
 - api docs
 - npm package
 - queue messages while not online
+- resubsribe on reconnect

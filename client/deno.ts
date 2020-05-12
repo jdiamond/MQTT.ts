@@ -11,7 +11,7 @@ const DEFAULT_BUF_SIZE = 4096;
 
 export class Client extends BaseClient {
   private conn: Deno.Conn | undefined;
-  private closed = false;
+  private closing = false;
   private logger: Logger;
 
   constructor(options: ClientOptions) {
@@ -27,7 +27,7 @@ export class Client extends BaseClient {
     });
 
     this.conn = conn;
-    this.closed = false;
+    this.closing = false;
 
     // This loops forever (until the connection is closed) so it gets invoked
     // without `await` so it doesn't block opening the connection.
@@ -42,7 +42,7 @@ export class Client extends BaseClient {
 
           bytesRead = await conn.read(buffer);
         } catch (err) {
-          if (this.closed && err.name === 'BadResource') {
+          if (this.closing && err.name === 'BadResource') {
             // Not sure why this exception gets thrown after closing the
             // connection. See my issue at
             // https://github.com/denoland/deno/issues/5194.
@@ -86,7 +86,7 @@ export class Client extends BaseClient {
       throw new Error('no connection');
     }
 
-    this.closed = true;
+    this.closing = true;
 
     this.conn.close();
   }
