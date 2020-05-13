@@ -30,10 +30,10 @@
     "build:browser": "npm run build:browser:esm && npm run build:browser:esm:min && npm run build:browser:umd && npm run build:browser:umd:min",
     "build:browser:esm": "deno bundle browser.ts > browser.mjs",
     "build:browser:esm:min": "terser browser.mjs -o browser.min.mjs",
-    "build:browser:umd": "babel --config-file ./browser.babel.config.json browser.mjs > browser.js",
+    "build:browser:umd": "babel --config-file ./babel/browser.json browser.mjs > browser.js",
     "build:browser:umd:min": "terser browser.js -o browser.min.js",
     "build:node": "npm run build:node:esm && npm run build:node:cjs",
     "build:node:esm": "deno bundle node.ts > index.mjs",
-    "build:node:cjs": "babel --config-file ./node.babel.config.json index.mjs > index.js"
+    "build:node:cjs": "babel --config-file ./babel/node.json index.mjs > index.js"
   }
 }

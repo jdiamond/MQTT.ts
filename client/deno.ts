@@ -12,12 +12,12 @@ const DEFAULT_BUF_SIZE = 4096;
 export class Client extends BaseClient {
   private conn: Deno.Conn | undefined;
   private closing = false;
-  private logger: Logger;
+  private logger?: Logger;
 
   constructor(options: ClientOptions) {
     super(options);
 
-    this.logger = options.logger || log.getLogger();
+    this.logger = options.logger;
   }
 
   protected async open() {
@@ -92,7 +92,9 @@ export class Client extends BaseClient {
   }
 
   protected log(msg: string, ...args: unknown[]) {
-    this.logger.debug(msg, ...args);
+    if (this.logger) {
+      this.logger.debug(msg, ...args);
+    }
   }
 }
 

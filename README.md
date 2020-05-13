@@ -18,8 +18,8 @@ To test publishing and subscribing to a local broker, run these commands in sepa
 
 ```
 /usr/local/sbin/mosquitto -c mosquitto.conf
-deno run --allow-net sub.ts -t "foo/#" -v
-deno run --allow-net pub.ts -t "foo/bar" -m "baz"
+deno run --allow-net tools/sub.ts -t "foo/#" -v
+deno run --allow-net tools/pub.ts -t "foo/bar" -m "baz"
 ```
 
 Protocol: https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html
@@ -28,7 +28,7 @@ Protocol: https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html
 
 The "raw" TypeScript files are import'able by Deno. The package.json file and the Node.js dependencies are only used to make the Node.js and browser builds.
 
-Look in pub.ts and sub.ts to see examples of using the client.
+Look in [examples/deno](examples/deno) to see examples of using the client.
 
 ## Node.js
 
@@ -38,7 +38,7 @@ A Node.js build can be made like this:
 npm run build:node
 ```
 
-Look in node-pub.js to see an example of using it.
+Look in [examples/node](examples/node) to see examples of using it.
 
 ## Browser
 

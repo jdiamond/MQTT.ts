@@ -1,5 +1,5 @@
 import { parse } from 'https://deno.land/std/flags/mod.ts';
-import { Client, setupLogger } from './mod.ts';
+import { Client, setupLogger } from '../mod.ts';
 
 function usage() {
   console.log(`Usage: pub.ts -h localhost -p 1883 -t topic/to/publish/to -m "message to publish"
