@@ -6,17 +6,14 @@ type TestClientOptions = BaseClientOptions & {
   openRejects?: number;
 };
 
-class TestClient extends BaseClient {
+class TestClient extends BaseClient<TestClientOptions> {
   sentPackets: AnyPacket[] = [];
   receivedPackets: AnyPacket[] = [];
   timerCallbacks: { [key: string]: Function } = {};
-  openRejects?: number;
   openCalls: number = 0;
 
   constructor(options: TestClientOptions = {}) {
     super(options);
-
-    this.openRejects = options.openRejects;
   }
 
   // These methods must be overridden by BaseClient subclasses:
@@ -24,7 +21,10 @@ class TestClient extends BaseClient {
   async open() {
     this.openCalls++;
 
-    if (this.openRejects && this.openCalls <= this.openRejects) {
+    if (
+      this.options.openRejects &&
+      this.openCalls <= this.options.openRejects
+    ) {
       throw new Error('nope');
     }
   }
@@ -79,7 +79,7 @@ class TestClient extends BaseClient {
   }
 
   protected log(msg: string, ...args: unknown[]) {
-    console.log(msg, ...args);
+    // console.log(msg, ...args);
   }
 }
 

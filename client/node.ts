@@ -18,7 +18,7 @@ declare interface Socket {
 
 const net = require('net');
 
-export class Client extends BaseClient {
+export class Client extends BaseClient<ClientOptions> {
   private socket: Socket | null = null;
 
   constructor(options: ClientOptions) {

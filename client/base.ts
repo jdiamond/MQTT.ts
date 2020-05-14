@@ -57,8 +57,9 @@ type ConnectionStates =
 
 const packetIdLimit = 2 ** 16;
 
-export abstract class BaseClient {
-  options: BaseClientOptions;
+export abstract class BaseClient<OptionsType extends BaseClientOptions> {
+  options: OptionsType;
+  initialized: boolean = false;
   clientId: string;
   keepAlive: number;
   connectionState: ConnectionStates;
@@ -93,8 +94,8 @@ export abstract class BaseClient {
     random: true,
   };
 
-  public constructor(options?: BaseClientOptions) {
-    this.options = options || {};
+  public constructor(options: OptionsType) {
+    this.options = options;
     this.clientId = this.generateClientId();
     this.keepAlive =
       typeof this.options.keepAlive === 'number'
@@ -120,6 +121,11 @@ export abstract class BaseClient {
     }
 
     this.changeState('connecting');
+
+    if (!this.initialized) {
+      this.initialized = true;
+      await this.init();
+    }
 
     const deferred = new Promise<ConnackPacket>((resolve, reject) => {
       this.resolveConnect = resolve;
@@ -262,6 +268,8 @@ export abstract class BaseClient {
   }
 
   // Connection methods implemented by subclasses
+
+  protected async init(): Promise<void> {}
 
   protected abstract async open(): Promise<void>;
 

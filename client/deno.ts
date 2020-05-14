@@ -5,19 +5,24 @@ import { LevelName } from 'https://deno.land/std@0.50.0/log/levels.ts';
 
 export type ClientOptions = BaseClientOptions & {
   logger?: Logger;
+  logLevel?: LevelName;
 };
 
 const DEFAULT_BUF_SIZE = 4096;
 
-export class Client extends BaseClient {
+export class Client extends BaseClient<ClientOptions> {
   private conn: Deno.Conn | undefined;
   private closing = false;
   private logger?: Logger;
 
   constructor(options: ClientOptions) {
     super(options);
+  }
 
-    this.logger = options.logger;
+  protected async init() {
+    this.logger =
+      this.options.logger ||
+      (await setupLogger(this.options.logLevel || 'INFO'));
   }
 
   protected async open() {

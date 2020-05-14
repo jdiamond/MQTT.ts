@@ -13,7 +13,7 @@ declare class WebSocket {
   close(): void;
 }
 
-export class Client extends BaseClient {
+export class Client extends BaseClient<ClientOptions> {
   private ws: WebSocket | undefined;
 
   constructor(options: ClientOptions) {
