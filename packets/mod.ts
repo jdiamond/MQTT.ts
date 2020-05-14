@@ -1,5 +1,5 @@
 import { decodeLength } from './length.ts';
-
+import { UTF8Encoder, UTF8Decoder } from './utf8.ts';
 import connect, { ConnectPacket } from './connect.ts';
 import connack, { ConnackPacket } from './connack.ts';
 import publish, { PublishPacket } from './publish.ts';
@@ -85,7 +85,10 @@ const packetTypesById = [
   disconnect, // 14
 ];
 
-export function encode(packet: AnyPacket): Uint8Array {
+export function encode(
+  packet: AnyPacket,
+  utf8Encoder?: UTF8Encoder
+): Uint8Array {
   const name = packet.type;
   const packetType: any = packetTypesByName[name];
 
@@ -93,16 +96,19 @@ export function encode(packet: AnyPacket): Uint8Array {
     throw new Error(`packet type ${name} cannot be encoded`);
   }
 
-  return Uint8Array.from(packetType.encode(packet));
+  return Uint8Array.from(packetType.encode(packet, utf8Encoder));
 }
 
-export function decode(buffer: Uint8Array): AnyPacketWithLength | null {
+export function decode(
+  buffer: Uint8Array,
+  utf8Decoder?: UTF8Decoder
+): AnyPacketWithLength | null {
   if (buffer.length < 2) {
     return null;
   }
 
   const id = buffer[0] >> 4;
-  const packetType = packetTypesById[id];
+  const packetType: any = packetTypesById[id];
 
   if (!packetType) {
     throw new Error(`packet type ${id} cannot be decoded`);
@@ -122,7 +128,8 @@ export function decode(buffer: Uint8Array): AnyPacketWithLength | null {
   const packet = packetType.decode(
     buffer,
     1 + bytesUsedToEncodeLength,
-    remainingLength
+    remainingLength,
+    utf8Decoder
   );
 
   if (!packet) {

@@ -1,4 +1,5 @@
 import { BaseClient, BaseClientOptions } from './base.ts';
+import { AnyPacket } from '../packets/mod.ts';
 
 export type ClientOptions = BaseClientOptions & {};
 
@@ -12,6 +13,9 @@ declare class WebSocket {
   send(data: Uint8Array): void;
   close(): void;
 }
+
+const utf8Encoder = new TextEncoder();
+const utf8Decoder = new TextDecoder();
 
 export class Client extends BaseClient<ClientOptions> {
   private ws: WebSocket | undefined;
@@ -91,5 +95,13 @@ export class Client extends BaseClient<ClientOptions> {
     }
 
     this.ws.close();
+  }
+
+  protected encode(packet: AnyPacket) {
+    return super.encode(packet, utf8Encoder);
+  }
+
+  protected decode(bytes: Uint8Array) {
+    return super.decode(bytes, utf8Decoder);
   }
 }

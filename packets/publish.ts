@@ -1,5 +1,10 @@
 import { encodeLength } from './length.ts';
-import { encodeUTF8String, toUTF8Array, decodeUTF8String } from './utf8.ts';
+import {
+  UTF8Encoder,
+  UTF8Decoder,
+  encodeUTF8String,
+  decodeUTF8String,
+} from './utf8.ts';
 
 export interface PublishPacket {
   type: 'publish';
@@ -12,7 +17,7 @@ export interface PublishPacket {
 }
 
 export default {
-  encode(packet: PublishPacket) {
+  encode(packet: PublishPacket, utf8Encoder: UTF8Encoder) {
     const packetType = 3;
 
     const qos = packet.qos || 0;
@@ -23,7 +28,7 @@ export default {
       (qos & 1 ? 2 : 0) +
       (packet.retain ? 1 : 0);
 
-    const variableHeader = [...encodeUTF8String(packet.topic)];
+    const variableHeader = [...encodeUTF8String(packet.topic, utf8Encoder)];
 
     if (qos === 1 || qos === 2) {
       if (typeof packet.id !== 'number' || packet.id < 1) {
@@ -36,7 +41,7 @@ export default {
     let payload = packet.payload;
 
     if (typeof payload === 'string') {
-      payload = toUTF8Array(payload);
+      payload = utf8Encoder.encode(payload);
     }
 
     const fixedHeader = [
@@ -50,7 +55,8 @@ export default {
   decode(
     buffer: Uint8Array,
     remainingStart: number,
-    remainingLength: number
+    remainingLength: number,
+    utf8Decoder: UTF8Decoder
   ): PublishPacket {
     const flags = buffer[0] & 0x0f;
 
@@ -63,7 +69,7 @@ export default {
     }
 
     const topicStart = remainingStart;
-    const decodedTopic = decodeUTF8String(buffer, topicStart);
+    const decodedTopic = decodeUTF8String(buffer, topicStart, utf8Decoder);
     const topic = decodedTopic.value;
 
     let id = 0;

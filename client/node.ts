@@ -1,4 +1,5 @@
 import { BaseClient, BaseClientOptions } from './base.ts';
+import { AnyPacket } from '../packets/mod.ts';
 
 export type ClientOptions = BaseClientOptions & {};
 
@@ -15,8 +16,24 @@ declare interface Socket {
   write(bytes: Uint8Array, cb: Function): void;
   end(): void;
 }
+declare class Buffer {
+  static from(str: string, encoding: string): Uint8Array;
+  static from(bytes: Uint8Array): { toString(encoding: string): string };
+}
 
 const net = require('net');
+
+const utf8Encoder = {
+  encode(str: string) {
+    return Buffer.from(str, 'utf8');
+  },
+};
+
+const utf8Decoder = {
+  decode(bytes: Uint8Array) {
+    return Buffer.from(bytes).toString('utf8');
+  },
+};
 
 export class Client extends BaseClient<ClientOptions> {
   private socket: Socket | null = null;
@@ -104,5 +121,13 @@ export class Client extends BaseClient<ClientOptions> {
     this.socket.end();
 
     this.socket = null;
+  }
+
+  protected encode(packet: AnyPacket) {
+    return super.encode(packet, utf8Encoder);
+  }
+
+  protected decode(bytes: Uint8Array) {
+    return super.decode(bytes, utf8Decoder);
   }
 }

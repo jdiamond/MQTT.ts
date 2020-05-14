@@ -1,14 +1,20 @@
 import { assertEquals } from 'https://deno.land/std@0.50.0/testing/asserts.ts';
 import { encode, decode } from './mod.ts';
 
+const utf8Encoder = new TextEncoder();
+const utf8Decoder = new TextDecoder();
+
 Deno.test(
   'encodeConnectPacketWithClientId',
   function encodeConnectPacketWithClientId() {
     assertEquals(
-      encode({
-        type: 'connect',
-        clientId: 'id',
-      }),
+      encode(
+        {
+          type: 'connect',
+          clientId: 'id',
+        },
+        utf8Encoder
+      ),
       [
         // fixedHeader
         16, // packetType + flags
@@ -39,11 +45,14 @@ Deno.test(
   'encodeConnectPacketWithCleanFalse',
   function encodeConnectPacketWithCleanFalse() {
     assertEquals(
-      encode({
-        type: 'connect',
-        clientId: 'id',
-        clean: false,
-      }),
+      encode(
+        {
+          type: 'connect',
+          clientId: 'id',
+          clean: false,
+        },
+        utf8Encoder
+      ),
       [
         // fixedHeader
         16, // packetType + flags
@@ -74,11 +83,14 @@ Deno.test(
   'encodeConnectPacketWithKeepAlive',
   function encodeConnectPacketWithKeepAlive() {
     assertEquals(
-      encode({
-        type: 'connect',
-        clientId: 'id',
-        keepAlive: 300,
-      }),
+      encode(
+        {
+          type: 'connect',
+          clientId: 'id',
+          keepAlive: 300,
+        },
+        utf8Encoder
+      ),
       [
         // fixedHeader
         16, // packetType + flags
@@ -109,12 +121,15 @@ Deno.test(
   'encodeConnectPacketWithUsernameAndPassword',
   function encodeConnectPacketWithUsernameAndPassword() {
     assertEquals(
-      encode({
-        type: 'connect',
-        clientId: 'id',
-        username: 'user',
-        password: 'pass',
-      }),
+      encode(
+        {
+          type: 'connect',
+          clientId: 'id',
+          username: 'user',
+          password: 'pass',
+        },
+        utf8Encoder
+      ),
       [
         // fixedHeader
         16, // packetType + flags
@@ -195,7 +210,8 @@ Deno.test(
           97, // 'a'
           115, // 's'
           115, // 's'
-        ])
+        ]),
+        utf8Decoder
       ),
       {
         type: 'connect',
@@ -207,7 +223,7 @@ Deno.test(
         will: undefined,
         clean: true,
         keepAlive: 0,
-        length: 28
+        length: 28,
       }
     );
   }

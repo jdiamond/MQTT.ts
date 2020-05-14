@@ -12,6 +12,7 @@ import {
   SubackPacket,
   UnsubackPacket,
 } from '../packets/mod.ts';
+import { UTF8Encoder, UTF8Decoder } from '../packets/utf8.ts';
 
 export type BaseClientOptions = {
   host?: string;
@@ -271,6 +272,17 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
   protected abstract async write(bytes: Uint8Array): Promise<void>;
 
   protected abstract async close(): Promise<void>;
+
+  protected encode(packet: AnyPacket, utf8Encoder?: UTF8Encoder): Uint8Array {
+    return encode(packet, utf8Encoder);
+  }
+
+  protected decode(
+    bytes: Uint8Array,
+    utf8Decoder?: UTF8Decoder
+  ): AnyPacketWithLength | null {
+    return decode(bytes, utf8Decoder);
+  }
 
   // Methods that can be overridden by subclasses
 
@@ -764,14 +776,6 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
     await this.write(bytes);
 
     this.lastPacketTime = new Date();
-  }
-
-  protected encode(packet: AnyPacket): Uint8Array {
-    return encode(packet);
-  }
-
-  protected decode(bytes: Uint8Array): AnyPacketWithLength | null {
-    return decode(bytes);
   }
 
   public on(eventName: string, listener: Function) {

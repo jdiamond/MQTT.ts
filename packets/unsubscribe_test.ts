@@ -3,11 +3,14 @@ import { encode } from './mod.ts';
 
 Deno.test('encodeUnsubscribePacket', function encodeUnsubscribePacket() {
   assertEquals(
-    encode({
-      type: 'unsubscribe',
-      id: 1,
-      topics: ['a/b', 'c/d'],
-    }),
+    encode(
+      {
+        type: 'unsubscribe',
+        id: 1,
+        topics: ['a/b', 'c/d'],
+      },
+      new TextEncoder()
+    ),
     [
       // fixedHeader
       0xa2, // packetType + flags

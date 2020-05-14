@@ -1,5 +1,5 @@
 import { encodeLength } from './length.ts';
-import { encodeUTF8String } from './utf8.ts';
+import { UTF8Encoder, encodeUTF8String } from './utf8.ts';
 
 export interface SubscribePacket {
   type: 'subscribe';
@@ -13,7 +13,7 @@ export type Subscription = {
 };
 
 export default {
-  encode(packet: SubscribePacket) {
+  encode(packet: SubscribePacket, utf8Encoder: UTF8Encoder) {
     const packetType = 8;
     const flags = 2;
 
@@ -22,7 +22,7 @@ export default {
     const payload = [];
 
     for (const sub of packet.subscriptions) {
-      payload.push(...encodeUTF8String(sub.topic), sub.qos);
+      payload.push(...encodeUTF8String(sub.topic, utf8Encoder), sub.qos);
     }
 
     const fixedHeader = [

@@ -1,10 +1,13 @@
 import { assertEquals } from 'https://deno.land/std@0.50.0/testing/asserts.ts';
 import { BaseClient, BaseClientOptions } from './base.ts';
-import { encode, decode, AnyPacket, PublishPacket } from '../packets/mod.ts';
+import { AnyPacket, PublishPacket } from '../packets/mod.ts';
 
 type TestClientOptions = BaseClientOptions & {
   openRejects?: number;
 };
+
+const utf8Encoder = new TextEncoder();
+const utf8Decoder = new TextDecoder();
 
 class TestClient extends BaseClient<TestClientOptions> {
   sentPackets: AnyPacket[] = [];
@@ -33,7 +36,7 @@ class TestClient extends BaseClient<TestClientOptions> {
   }
 
   async write(bytes: Uint8Array) {
-    const packet = decode(bytes);
+    const packet = this.decode(bytes);
     this.sentPackets.push(packet!);
   }
 
@@ -41,9 +44,17 @@ class TestClient extends BaseClient<TestClientOptions> {
     this.connectionClosed();
   }
 
+  encode(packet: AnyPacket) {
+    return super.encode(packet, utf8Encoder);
+  }
+
+  decode(bytes: Uint8Array) {
+    return super.decode(bytes, utf8Decoder);
+  }
+
   // Helper method to simulate receiving bytes for a packet from the server.
   receivePacket(packet: AnyPacket, options: { trickle?: boolean } = {}) {
-    this.receiveBytes(encode(packet));
+    this.receiveBytes(this.encode(packet), options);
   }
 
   // Gives us access to the protected `bytesReceived` method.
@@ -269,7 +280,7 @@ Deno.test('client can receive one byte at a time', async () => {
 
   assertEquals(client.receivedPackets[1].type, 'publish');
 
-  const bytes = encode({
+  const bytes = client.encode({
     type: 'publish',
     topic: 'test2',
     payload: 'test2',
@@ -309,12 +320,12 @@ Deno.test('client can receive bytes for multiple packets at once', async () => {
   assertEquals(client.connectionState, 'connected');
 
   const bytes = Uint8Array.from([
-    ...encode({
+    ...client.encode({
       type: 'publish',
       topic: 'topic1',
       payload: 'payload1',
     }),
-    ...encode({
+    ...client.encode({
       type: 'publish',
       topic: 'topic2',
       payload: 'payload2',

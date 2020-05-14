@@ -3,14 +3,17 @@ import { encode } from './mod.ts';
 
 Deno.test('encodeSubscribePacket', function encodeSubscribePacket() {
   assertEquals(
-    encode({
-      type: 'subscribe',
-      id: 1,
-      subscriptions: [
-        { topic: 'a/b', qos: 0 },
-        { topic: 'c/d', qos: 1 },
-      ],
-    }),
+    encode(
+      {
+        type: 'subscribe',
+        id: 1,
+        subscriptions: [
+          { topic: 'a/b', qos: 0 },
+          { topic: 'c/d', qos: 1 },
+        ],
+      },
+      new TextEncoder()
+    ),
     [
       // fixedHeader
       0x82, // packetType + flags

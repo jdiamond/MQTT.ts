@@ -1,5 +1,10 @@
 import { encodeLength } from './length.ts';
-import { encodeUTF8String, decodeUTF8String } from './utf8.ts';
+import {
+  UTF8Encoder,
+  UTF8Decoder,
+  encodeUTF8String,
+  decodeUTF8String,
+} from './utf8.ts';
 
 export interface ConnectPacket {
   type: 'connect';
@@ -17,11 +22,11 @@ export interface ConnectPacket {
 }
 
 export default {
-  encode(packet: ConnectPacket) {
+  encode(packet: ConnectPacket, utf8Encoder: UTF8Encoder) {
     const packetType = 1;
     const flags = 0;
 
-    const protocolName = encodeUTF8String('MQTT');
+    const protocolName = encodeUTF8String('MQTT', utf8Encoder);
     const protocolLevel = 4;
 
     const usernameFlag = !!packet.username;
@@ -52,14 +57,14 @@ export default {
       keepAlive & 0xff,
     ];
 
-    const payload = [...encodeUTF8String(packet.clientId)];
+    const payload = [...encodeUTF8String(packet.clientId, utf8Encoder)];
 
     if (packet.username) {
-      payload.push(...encodeUTF8String(packet.username));
+      payload.push(...encodeUTF8String(packet.username, utf8Encoder));
     }
 
     if (packet.password) {
-      payload.push(...encodeUTF8String(packet.password));
+      payload.push(...encodeUTF8String(packet.password, utf8Encoder));
     }
 
     const fixedHeader = [
@@ -73,10 +78,15 @@ export default {
   decode(
     buffer: Uint8Array,
     remainingStart: number,
-    _remainingLength: number
+    _remainingLength: number,
+    utf8Decoder: UTF8Decoder
   ): ConnectPacket {
     const protocolNameStart = remainingStart;
-    const protocolName = decodeUTF8String(buffer, protocolNameStart);
+    const protocolName = decodeUTF8String(
+      buffer,
+      protocolNameStart,
+      utf8Decoder
+    );
 
     const protocolLevelIndex = protocolNameStart + protocolName.length;
     const protocolLevel = buffer[protocolLevelIndex];
@@ -99,7 +109,7 @@ export default {
       (buffer[keepAliveIndex] << 8) + buffer[keepAliveIndex + 1];
 
     const clientIdStart = keepAliveIndex + 2;
-    const clientId = decodeUTF8String(buffer, clientIdStart);
+    const clientId = decodeUTF8String(buffer, clientIdStart, utf8Decoder);
 
     let username;
     let password;
@@ -107,12 +117,12 @@ export default {
     const usernameStart = clientIdStart + clientId.length;
 
     if (usernameFlag) {
-      username = decodeUTF8String(buffer, usernameStart);
+      username = decodeUTF8String(buffer, usernameStart, utf8Decoder);
     }
 
     if (passwordFlag) {
       const passwordStart = usernameStart + (username ? username.length : 0);
-      password = decodeUTF8String(buffer, passwordStart);
+      password = decodeUTF8String(buffer, passwordStart, utf8Decoder);
     }
 
     return {

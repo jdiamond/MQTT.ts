@@ -11,7 +11,7 @@ Tested with Deno 1.0.0.
 To run the unit tests:
 
 ```
-deno test
+deno test client packets
 ```
 
 To test publishing and subscribing to a local broker, run these commands in separate shells:

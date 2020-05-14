@@ -1,5 +1,5 @@
 import { encodeLength } from './length.ts';
-import { encodeUTF8String } from './utf8.ts';
+import { UTF8Encoder, encodeUTF8String } from './utf8.ts';
 
 export interface UnsubscribePacket {
   type: 'unsubscribe';
@@ -8,7 +8,7 @@ export interface UnsubscribePacket {
 }
 
 export default {
-  encode(packet: UnsubscribePacket) {
+  encode(packet: UnsubscribePacket, utf8Encoder: UTF8Encoder) {
     const packetType = 0b1010;
     const flags = 0b0010;
 
@@ -17,7 +17,7 @@ export default {
     const payload = [];
 
     for (const topic of packet.topics) {
-      payload.push(...encodeUTF8String(topic));
+      payload.push(...encodeUTF8String(topic, utf8Encoder));
     }
 
     const fixedHeader = [
