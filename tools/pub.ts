@@ -1,4 +1,4 @@
-import { parse } from 'https://deno.land/std/flags/mod.ts';
+import { parse } from 'https://deno.land/std@0.50.0/flags/mod.ts';
 import { Client, setupLogger } from '../mod.ts';
 
 function usage() {

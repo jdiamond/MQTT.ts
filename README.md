@@ -6,7 +6,7 @@ It is _not_ a port of the excellent [MQTT.js](https://github.com/mqttjs/MQTT.js)
 
 This is not complete, but it can connect, publish, and subscribe.
 
-Last tested with deno 0.42.0.
+Tested with Deno 1.0.0.
 
 To run the unit tests:
 

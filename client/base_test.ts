@@ -1,4 +1,4 @@
-import { assertEquals } from 'https://deno.land/std/testing/asserts.ts';
+import { assertEquals } from 'https://deno.land/std@0.50.0/testing/asserts.ts';
 import { BaseClient, BaseClientOptions } from './base.ts';
 import { encode, decode, AnyPacket, PublishPacket } from '../packets/mod.ts';
 

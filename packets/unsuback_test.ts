@@ -1,4 +1,4 @@
-import { assertEquals } from 'https://deno.land/std/testing/asserts.ts';
+import { assertEquals } from 'https://deno.land/std@0.50.0/testing/asserts.ts';
 import { decode } from './mod.ts';
 
 Deno.test('decodeUnsubackPacket', function decodeUnsubackPacket() {

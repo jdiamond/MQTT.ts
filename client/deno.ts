@@ -1,7 +1,7 @@
 import { BaseClient, BaseClientOptions } from './base.ts';
-import * as log from 'https://deno.land/std/log/mod.ts';
-import { Logger, LogRecord } from 'https://deno.land/std/log/logger.ts';
-import { LevelName } from 'https://deno.land/std/log/levels.ts';
+import * as log from 'https://deno.land/std@0.50.0/log/mod.ts';
+import { Logger, LogRecord } from 'https://deno.land/std@0.50.0/log/logger.ts';
+import { LevelName } from 'https://deno.land/std@0.50.0/log/levels.ts';
 
 export type ClientOptions = BaseClientOptions & {
   logger?: Logger;
