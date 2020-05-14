@@ -1,28 +1,15 @@
 import { BaseClient, BaseClientOptions } from './base.ts';
-import * as log from 'https://deno.land/std@0.50.0/log/mod.ts';
-import { Logger, LogRecord } from 'https://deno.land/std@0.50.0/log/logger.ts';
-import { LevelName } from 'https://deno.land/std@0.50.0/log/levels.ts';
 
-export type ClientOptions = BaseClientOptions & {
-  logger?: Logger;
-  logLevel?: LevelName;
-};
+export type ClientOptions = BaseClientOptions & {};
 
 const DEFAULT_BUF_SIZE = 4096;
 
 export class Client extends BaseClient<ClientOptions> {
   private conn: Deno.Conn | undefined;
   private closing = false;
-  private logger?: Logger;
 
   constructor(options: ClientOptions) {
     super(options);
-  }
-
-  protected async init() {
-    this.logger =
-      this.options.logger ||
-      (await setupLogger(this.options.logLevel || 'INFO'));
   }
 
   protected async open() {
@@ -95,48 +82,4 @@ export class Client extends BaseClient<ClientOptions> {
 
     this.conn.close();
   }
-
-  protected log(msg: string, ...args: unknown[]) {
-    if (this.logger) {
-      this.logger.debug(msg, ...args);
-    }
-  }
-}
-
-export async function setupLogger(levelName: LevelName) {
-  await log.setup({
-    handlers: {
-      mqtt: new log.handlers.ConsoleHandler(levelName, {
-        formatter: (logRecord: LogRecord) => {
-          let output = `${logRecord.levelName} ${logRecord.msg}`;
-
-          const args = logRecord.args;
-
-          if (args.length > 0) {
-            for (const arg of args) {
-              if (arg instanceof Uint8Array) {
-                output +=
-                  ' ' +
-                  [...arg]
-                    .map((byte) => byte.toString(16).padStart(2, '0'))
-                    .join(' ');
-              } else if (typeof arg === 'object') {
-                output += ' ' + Deno.inspect(arg);
-              }
-            }
-          }
-
-          return output;
-        },
-      }),
-    },
-    loggers: {
-      mqtt: {
-        level: levelName,
-        handlers: ['mqtt'],
-      },
-    },
-  });
-
-  return log.getLogger('mqtt');
 }

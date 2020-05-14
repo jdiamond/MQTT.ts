@@ -13,7 +13,10 @@ class TestClient extends BaseClient<TestClientOptions> {
   openCalls: number = 0;
 
   constructor(options: TestClientOptions = {}) {
-    super(options);
+    super({
+      ...options,
+      // logger: console.log,
+    });
   }
 
   // These methods must be overridden by BaseClient subclasses:
@@ -76,10 +79,6 @@ class TestClient extends BaseClient<TestClientOptions> {
 
   triggerTimer(name: string) {
     this.timerCallbacks[name]();
-  }
-
-  protected log(msg: string, ...args: unknown[]) {
-    // console.log(msg, ...args);
   }
 }
 

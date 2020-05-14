@@ -1,5 +1,6 @@
 import { parse } from 'https://deno.land/std@0.50.0/flags/mod.ts';
-import { Client, setupLogger } from '../mod.ts';
+import { Client } from '../mod.ts';
+import { setupLogger } from './logger.ts';
 
 function usage() {
   console.log(`Usage: sub.ts -h localhost -p 1883 -t "topic/#" -v
@@ -50,7 +51,7 @@ async function main() {
     host: args.host,
     port: args.port,
     keepAlive: args['keep-alive'],
-    logger,
+    logger: logger.debug.bind(logger),
   });
 
   const utf8Decoder = new TextDecoder('utf-8');

@@ -1,5 +1,6 @@
 import { parse } from 'https://deno.land/std@0.50.0/flags/mod.ts';
-import { Client, setupLogger } from '../mod.ts';
+import { Client } from '../mod.ts';
+import { setupLogger } from './logger.ts';
 
 function usage() {
   console.log(`Usage: pub.ts -h localhost -p 1883 -t topic/to/publish/to -m "message to publish"
@@ -61,7 +62,7 @@ async function main() {
   const client = new Client({
     host: args.host,
     port: args.port,
-    logger,
+    logger: logger.debug.bind(logger),
   });
 
   await client.connect();

@@ -16,7 +16,7 @@ declare class WebSocket {
 export class Client extends BaseClient<ClientOptions> {
   private ws: WebSocket | undefined;
 
-  constructor(options: ClientOptions) {
+  constructor(options: ClientOptions = {}) {
     super(options);
   }
 
@@ -91,9 +91,5 @@ export class Client extends BaseClient<ClientOptions> {
     }
 
     this.ws.close();
-  }
-
-  protected log(msg: string, ...args: unknown[]) {
-    console.log(msg, ...args);
   }
 }

@@ -22,6 +22,7 @@ export type BaseClientOptions = {
   password?: string;
   connectTimeout?: number;
   reconnect?: boolean | ReconnectOptions;
+  logger?: (msg: string, ...args: unknown[]) => void;
 };
 
 export type ReconnectOptions = {
@@ -59,7 +60,6 @@ const packetIdLimit = 2 ** 16;
 
 export abstract class BaseClient<OptionsType extends BaseClientOptions> {
   options: OptionsType;
-  initialized: boolean = false;
   clientId: string;
   keepAlive: number;
   connectionState: ConnectionStates;
@@ -81,6 +81,7 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
     }
   >();
   eventListeners: Map<string, Function[]> = new Map();
+  log: (msg: string, ...args: unknown[]) => void;
 
   // TODO: combine these into one defaults property?
   defaultClientIdPrefix: string = 'mqttts';
@@ -104,6 +105,7 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
     this.connectionState = 'never-connected';
     this.reconnectAttempt = 0;
     this.lastPacketId = 0;
+    this.log = this.options.logger || (() => {});
   }
 
   // Public methods
@@ -121,11 +123,6 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
     }
 
     this.changeState('connecting');
-
-    if (!this.initialized) {
-      this.initialized = true;
-      await this.init();
-    }
 
     const deferred = new Promise<ConnackPacket>((resolve, reject) => {
       this.resolveConnect = resolve;
@@ -268,8 +265,6 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
   }
 
   // Connection methods implemented by subclasses
-
-  protected async init(): Promise<void> {}
 
   protected abstract async open(): Promise<void>;
 
@@ -809,9 +804,5 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
         listener(...args);
       }
     }
-  }
-
-  protected log(msg: string, ...args: unknown[]) {
-    // console.log(msg, ...args);
   }
 }

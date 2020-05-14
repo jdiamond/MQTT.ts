@@ -21,7 +21,7 @@ const net = require('net');
 export class Client extends BaseClient<ClientOptions> {
   private socket: Socket | null = null;
 
-  constructor(options: ClientOptions) {
+  constructor(options: ClientOptions = {}) {
     super(options);
   }
 
@@ -104,9 +104,5 @@ export class Client extends BaseClient<ClientOptions> {
     this.socket.end();
 
     this.socket = null;
-  }
-
-  protected log(msg: string, ...args: unknown[]) {
-    console.log(msg, ...args);
   }
 }
