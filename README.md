@@ -11,7 +11,7 @@ Tested with Deno 1.0.0.
 To run the unit tests:
 
 ```
-deno test client packets
+deno test
 ```
 
 To test publishing and subscribing to a local broker, run these commands in separate shells:
@@ -26,7 +26,7 @@ Protocol: https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html
 
 ## Deno
 
-The "raw" TypeScript files are import'able by Deno. The package.json file and the Node.js dependencies are only used to make the Node.js and browser builds.
+The "raw" TypeScript files are import'able by Deno.
 
 Look in [examples/deno](examples/deno) to see examples of using the client.
 
@@ -35,6 +35,7 @@ Look in [examples/deno](examples/deno) to see examples of using the client.
 A Node.js build can be made like this:
 
 ```
+cd build
 npm run build:node
 ```
 
@@ -45,10 +46,11 @@ Look in [examples/node](examples/node) to see examples of using it.
 A browser build can be made like this:
 
 ```
+cd build
 npm run build:browser
 ```
 
-Look in index.html to see an example of using it.
+The [examples/browser](examples/browser) folder contains an example using it.
 
 ## TODO
 

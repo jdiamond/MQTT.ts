@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const { Client } = require('../../index.js');
+const { Client } = require('../../build/index.js');
 
 async function main() {
   const client = new Client({

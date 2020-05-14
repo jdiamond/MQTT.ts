@@ -1,0 +1,11 @@
+{
+  "name": "browser",
+  "private": true,
+  "scripts": {
+    "build": "cd ../../build && npm run build:browser && cd ../examples/browser && cp ../../build/browser.mjs .",
+    "start": "serve"
+  },
+  "dependencies": {
+    "serve": "^11.3.0"
+  }
+}
