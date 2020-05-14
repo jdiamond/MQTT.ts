@@ -12,7 +12,6 @@ declare interface Net {
 }
 declare interface Socket {
   on(eventName: string, listener: Function): void;
-  once(eventName: string, listener: Function): void;
   write(bytes: Uint8Array, cb: Function): void;
   end(): void;
 }
@@ -37,6 +36,7 @@ const utf8Decoder = {
 
 export class Client extends BaseClient<ClientOptions> {
   private socket: Socket | null = null;
+  private socketState: undefined | 'connecting' | 'connected' | 'failed';
 
   constructor(options: ClientOptions = {}) {
     super(options);
@@ -47,37 +47,48 @@ export class Client extends BaseClient<ClientOptions> {
 
     this.log(`opening connection to ${host}:${port}`);
 
-    return new Promise<void>((resolve, reject) => {
-      // This function is asynchronous. When the connection is established, the
-      // 'connect' event will be emitted. If there is a problem connecting,
-      // instead of a 'connect' event, an 'error' event will be emitted with the
-      // error passed to the 'error' listener. The last parameter
-      // connectListener, if supplied, will be added as a listener for the
-      // 'connect' event once.
-      // https://nodejs.org/dist/latest-v12.x/docs/api/net.html#net_socket_connect
+    this.socketState = 'connecting';
 
+    return new Promise<void>((resolve, reject) => {
       const socket = net.connect(
         {
           host,
           port,
         },
         () => {
+          this.socketState = 'connected';
+
           resolve();
         }
       );
 
       this.socket = socket;
 
-      socket.once('error', (err: Error) => {
-        reject(err);
-      });
+      // From the Node.js documentation:
+      //
+      // This function is asynchronous. When the connection is established, the
+      // 'connect' event will be emitted. If there is a problem connecting,
+      // instead of a 'connect' event, an 'error' event will be emitted with the
+      // error passed to the 'error' listener. The last parameter
+      // connectListener, if supplied, will be added as a listener for the
+      // 'connect' event once.
+      //
+      // https://nodejs.org/dist/latest-v12.x/docs/api/net.html#net_socket_connect
 
-      socket.on('data', (bytes: Uint8Array) => {
-        this.bytesReceived(bytes);
+      socket.on('error', (err: Error) => {
+        if (this.socketState === 'connecting') {
+          this.socketState = 'failed';
+
+          reject(err);
+        }
       });
 
       socket.on('end', () => {
         this.connectionClosed();
+      });
+
+      socket.on('data', (bytes: Uint8Array) => {
+        this.bytesReceived(bytes);
       });
     });
   }
@@ -92,16 +103,17 @@ export class Client extends BaseClient<ClientOptions> {
     this.log('writing bytes', bytes);
 
     return new Promise<void>((resolve, reject) => {
+      // From the Node.js documentation:
+      //
       // The writable.write() method writes some data to the stream, and calls
       // the supplied callback once the data has been fully handled. If an error
       // occurs, the callback may or may not be called with the error as its
       // first argument. To reliably detect write errors, add a listener for the
       // 'error' event.
+      //
       // https://nodejs.org/dist/latest-v12.x/docs/api/stream.html#stream_writable_write_chunk_encoding_callback
-
-      socket.once('error', (err: Error) => {
-        reject(err);
-      });
+      //
+      // We already add a listener for error events when the connection is opened.
 
       socket.write(bytes, (err: Error) => {
         if (!err) {
