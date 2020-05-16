@@ -5,6 +5,7 @@ export interface UnsubackPacket {
 
 export default {
   encode(_packet: UnsubackPacket) {
+    // TODO
     throw new Error('unsuback.encode is not implemented yet');
   },
 

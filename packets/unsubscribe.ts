@@ -33,6 +33,7 @@ export default {
     _remainingStart: number,
     _remainingLength: number
   ): UnsubscribePacket {
+    // TODO
     throw new Error('unsubscribe.decode is not implemented yet');
   },
 };

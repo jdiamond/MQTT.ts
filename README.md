@@ -64,11 +64,11 @@ The [examples/browser](examples/browser) folder contains an example using it.
 
 ## TODO
 
-- finish encoders, decoders, and tests for all packet types
-- unit tests for abstract client
-- retry logic for unacknowledged publishes
-- async iterators for messages matching topic patterns
+- quick start examples
 - api docs
-- npm package
-- queue messages while not online
 - also support 3.1 and 5.0
+- async iterators for messages matching topic patterns
+- address all TODO comments in code
+- npm package for node.js and browser builds
+- check unpkg works with npm package
+- types for node.js and browser builds

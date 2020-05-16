@@ -154,6 +154,7 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
       case 'offline':
         break;
       default:
+        // TODO: queue publishes while not connected
         throw new Error(
           `should not be connecting in ${this.connectionState} state`
         );
@@ -260,6 +261,8 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
   }
 
   public async disconnect() {
+    // TODO: allow to be called when not connected so users can connect,
+    // publish, disconnect without waiting for connack.
     switch (this.connectionState) {
       case 'connected':
         this.changeState('disconnecting');
@@ -464,6 +467,8 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
       this.rejectConnect = null;
     }
 
+    // TODO: flush publishes queued while not connected
+    // TODO: resend unacknowledged publish and pubcomp packets
     this.sendSubscriptions();
     this.stopConnectTimer();
     this.startKeepAliveTimer();
