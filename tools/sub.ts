@@ -6,35 +6,40 @@ function usage() {
   console.log(`Usage: sub.ts -h localhost -p 1883 -t "topic/#" -v
 
 Options:
- -h/--host        broker host [localhost]
- -p/--port        broker port [1883]
- -t/--topic       topic filter (can be multiple) [#]
- -q/--qos         qos [0]
- -v/--verbose     print topic before message [false]
- -k/--keep-alive  keep alive in seconds [60]
- -L/--log-level   level to log (info or debug) [info]`);
+ --clean          clean session (--no-clean to disable) [true]
+ --client-id/-i   client id [random]
+ --host/-h        broker host [localhost]
+ --port/-p        broker port [1883]
+ --keep-alive/-k  keep alive in seconds [60]
+ --log-level/-L   level to log (info or debug) [info];
+ --qos/-q         qos [0]
+ --topic/-t       topic filter (can be multiple) [#]
+ --verbose/-v     print topic before message [false]`);
 }
 
 async function main() {
   const args = parse(Deno.args, {
-    boolean: ['help', 'verbose'],
+    boolean: ['clean', 'help', 'verbose'],
+    string: ['host', 'topic'],
     alias: {
-      L: 'log-level',
       h: 'host',
+      i: 'client-id',
+      k: 'keep-alive',
+      L: 'log-level',
       p: 'port',
       t: 'topic',
       v: 'verbose',
-      k: 'keep-alive',
     },
     default: {
+      clean: true,
       help: false,
-      'log-level': 'info',
       host: 'localhost',
-      port: 1883,
-      topic: '#',
-      qos: 0,
-      verbose: false,
       'keep-alive': 60,
+      'log-level': 'info',
+      port: 1883,
+      qos: 0,
+      topic: '#',
+      verbose: false,
     },
   });
 
@@ -50,6 +55,8 @@ async function main() {
   const client = new Client({
     host: args.host,
     port: args.port,
+    clientId: args['client-id'],
+    clean: args.clean,
     keepAlive: args['keep-alive'],
     logger: logger.debug.bind(logger),
   });

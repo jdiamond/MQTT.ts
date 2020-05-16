@@ -6,29 +6,31 @@ function usage() {
   console.log(`Usage: pub.ts -h localhost -p 1883 -t topic/to/publish/to -m "message to publish"
 
 Options:
- -h/--host       broker host [localhost]
- -p/--port       broker port [1883]
- -t/--topic      topic
- -m/--message    message payload
- -L/--log-level  level to log (info or debug) [info]`);
+ --host/-h       broker host [localhost]
+ --log-level/-L  level to log (info or debug) [info]
+ --message/-m    message payload
+ --port/-p       broker port [1883]
+ --retain/-r     retain message [false]
+ --topic/-t      topic`);
 }
 
 async function main() {
   const args = parse(Deno.args, {
     boolean: ['help', 'retain'],
+    string: ['host', 'message', 'topic'],
     alias: {
-      L: 'log-level',
       h: 'host',
-      p: 'port',
-      t: 'topic',
+      L: 'log-level',
       m: 'message',
+      p: 'port',
       q: 'qos',
       r: 'retain',
+      t: 'topic',
     },
     default: {
       help: false,
-      'log-level': 'info',
       host: 'localhost',
+      'log-level': 'info',
       port: 1883,
       qos: 0,
       retain: false,

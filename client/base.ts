@@ -18,6 +18,7 @@ export type BaseClientOptions = {
   host?: string;
   port?: number;
   clientId?: string | Function;
+  clean?: boolean;
   keepAlive?: number;
   username?: string;
   password?: string;
@@ -293,9 +294,10 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
     await this.send({
       type: 'connect',
       clientId: this.clientId,
-      keepAlive: this.keepAlive,
       username: this.options.username,
       password: this.options.password,
+      clean: this.options.clean !== false,
+      keepAlive: this.keepAlive,
     });
 
     this.changeState('waiting-for-connack');

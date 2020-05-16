@@ -17,10 +17,12 @@ export class Client extends BaseClient<ClientOptions> {
   }
 
   protected async open() {
-    const conn = await Deno.connect({
-      hostname: this.options.host || 'localhost',
-      port: this.options.port || 1883,
-    });
+    const hostname = this.options.host || 'localhost';
+    const port = this.options.port || 1883;
+
+    this.log(`opening connection to ${hostname}:${port}`);
+
+    const conn = await Deno.connect({ hostname, port });
 
     this.conn = conn;
     this.closing = false;
