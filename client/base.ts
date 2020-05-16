@@ -228,7 +228,14 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
     });
 
     for (const sub of subs) {
-      // TODO: subscribe should replace existing subscriptions
+      // Replace any matching subscription so we don't resubscribe to it
+      // multiple times on reconnect. This matches what the broker is supposed
+      // to do when it receives a subscribe packet containing a topic filter
+      // matching an existing subscription.
+      this.subscriptions = this.subscriptions.filter(
+        (old) => old.topic !== sub.topic
+      );
+
       this.subscriptions.push(sub);
     }
 
@@ -537,6 +544,7 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
   }
 
   protected handleSuback(_packet: SubackPacket) {
+    // TODO: verify returnCodes length matches subscriptions.length
     // TODO: mark subscription as acknowledged
   }
 

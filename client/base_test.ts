@@ -456,15 +456,15 @@ Deno.test('reconnecting resubscribes', async () => {
   await sleep(1);
 
   assertEquals(client.sentPackets[1].type, 'subscribe');
-  assertEquals(
-    (client.sentPackets[1] as SubscribePacket).subscriptions[0].topic,
-    'topic1'
-  );
+  assertEquals((client.sentPackets[1] as SubscribePacket).subscriptions, [
+    { topic: 'topic1', qos: 0 },
+    { topic: 'topic2', qos: 0 },
+  ]);
 
   client.receivePacket({
     type: 'suback',
     id: (client.sentPackets[1] as SubscribePacket).id,
-    returnCodes: [0],
+    returnCodes: [0, 0],
   });
 
   client.unsubscribe('topic1');
@@ -485,6 +485,27 @@ Deno.test('reconnecting resubscribes', async () => {
     id: (client.sentPackets[2] as UnsubscribePacket).id,
   });
 
+  // Subscribing to topic2 again (which we are still subscribe to)...
+  client.subscribe('topic2');
+
+  // ...should not add to the list of known subscriptions.
+  assertEquals(client.subscriptions, [{ topic: 'topic2', qos: 0 }]);
+
+  // Sleep a little to allow the subscribe packet to be sent.
+  await sleep(1);
+
+  assertEquals(client.sentPackets[3].type, 'subscribe');
+  assertEquals((client.sentPackets[3] as SubscribePacket).subscriptions, [
+    { topic: 'topic2', qos: 0 },
+  ]);
+
+  client.receivePacket({
+    type: 'suback',
+    id: (client.sentPackets[3] as SubscribePacket).id,
+    returnCodes: [0],
+  });
+
+  // Break the connection so we can test resubscribing.
   client.testCloseConnection();
 
   assertEquals(client.connectionState, 'offline');
@@ -496,7 +517,7 @@ Deno.test('reconnecting resubscribes', async () => {
   // Sleep a little to allow the connect packet to be sent.
   await sleep(1);
 
-  assertEquals(client.sentPackets[3].type, 'connect');
+  assertEquals(client.sentPackets[4].type, 'connect');
   assertEquals(client.connectionState, 'waiting-for-connack');
 
   client.receivePacket({
@@ -510,9 +531,8 @@ Deno.test('reconnecting resubscribes', async () => {
   // Sleep a little to allow the subscribe packet to be sent.
   await sleep(1);
 
-  assertEquals(client.sentPackets[4].type, 'subscribe');
-  assertEquals(
-    (client.sentPackets[4] as SubscribePacket).subscriptions[0].topic,
-    'topic2'
-  );
+  assertEquals(client.sentPackets[5].type, 'subscribe');
+  assertEquals((client.sentPackets[5] as SubscribePacket).subscriptions, [
+    { topic: 'topic2', qos: 0 },
+  ]);
 });
