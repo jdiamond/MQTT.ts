@@ -71,5 +71,4 @@ The [examples/browser](examples/browser) folder contains an example using it.
 - api docs
 - npm package
 - queue messages while not online
-- resubscribe on reconnect
 - also support 3.1 and 5.0

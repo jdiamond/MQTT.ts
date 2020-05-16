@@ -1,6 +1,6 @@
 import { assertEquals } from 'https://deno.land/std@0.50.0/testing/asserts.ts';
 import { BaseClient, BaseClientOptions } from './base.ts';
-import { AnyPacket, PublishPacket } from '../packets/mod.ts';
+import { AnyPacket, PublishPacket, SubscribePacket } from '../packets/mod.ts';
 
 type TestClientOptions = BaseClientOptions & {
   openRejects?: number;
@@ -74,6 +74,10 @@ class TestClient extends BaseClient<TestClientOptions> {
 
     // Let the base client process the packet.
     super.packetReceived(packet);
+  }
+
+  testCloseConnection() {
+    this.connectionClosed();
   }
 
   // These methods are here to simulate timers without actually passing time:
@@ -413,4 +417,77 @@ Deno.test('connect rejects when retries is 0', async () => {
   assertEquals(client.connectionState, 'offline');
   assertEquals(connectResolved, false);
   assertEquals(connectRejected, true);
+});
+
+Deno.test('reconnecting', async () => {
+  const client = new TestClient();
+
+  client.connect();
+
+  assertEquals(client.connectionState, 'connecting');
+
+  // Sleep a little to allow the connect packet to be sent.
+  await sleep(1);
+
+  assertEquals(client.sentPackets[0].type, 'connect');
+  assertEquals(client.connectionState, 'waiting-for-connack');
+
+  client.receivePacket({
+    type: 'connack',
+    returnCode: 0,
+    sessionPresent: false,
+  });
+
+  assertEquals(client.connectionState, 'connected');
+
+  client.subscribe('topic1');
+
+  // Sleep a little to allow the subscribe packet to be sent.
+  await sleep(1);
+
+  assertEquals(client.sentPackets[1].type, 'subscribe');
+  assertEquals(
+    (client.sentPackets[1] as SubscribePacket).subscriptions[0].topic,
+    'topic1'
+  );
+
+  client.receivePacket({
+    type: 'suback',
+    id: (client.sentPackets[1] as SubscribePacket).id,
+    returnCodes: [0],
+  });
+
+  assertEquals(client.subscriptions.length, 1);
+  assertEquals(client.subscriptions[0].topic, 'topic1');
+
+  client.testCloseConnection();
+
+  assertEquals(client.connectionState, 'offline');
+
+  client.triggerTimer('reconnect');
+
+  assertEquals(client.connectionState, 'reconnecting');
+
+  // Sleep a little to allow the connect packet to be sent.
+  await sleep(1);
+
+  assertEquals(client.sentPackets[2].type, 'connect');
+  assertEquals(client.connectionState, 'waiting-for-connack');
+
+  client.receivePacket({
+    type: 'connack',
+    returnCode: 0,
+    sessionPresent: false,
+  });
+
+  assertEquals(client.connectionState, 'connected');
+
+  // Sleep a little to allow the subscribe packet to be sent.
+  await sleep(1);
+
+  assertEquals(client.sentPackets[3].type, 'subscribe');
+  assertEquals(
+    (client.sentPackets[3] as SubscribePacket).subscriptions[0].topic,
+    'topic1'
+  );
 });

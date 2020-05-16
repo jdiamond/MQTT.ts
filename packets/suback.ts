@@ -5,8 +5,17 @@ export interface SubackPacket {
 }
 
 export default {
-  encode(_packet: SubackPacket) {
-    throw new Error('suback.encode is not implemented yet');
+  encode(packet: SubackPacket) {
+    const packetType = 9;
+    const flags = 0;
+
+    return [
+      (packetType << 4) + flags,
+      2 + packet.returnCodes.length,
+      packet.id >> 8,
+      packet.id & 0xff,
+      ...packet.returnCodes,
+    ];
   },
 
   decode(

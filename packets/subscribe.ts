@@ -1,5 +1,11 @@
+import { QoS } from '../types.ts';
 import { encodeLength } from './length.ts';
-import { UTF8Encoder, encodeUTF8String } from './utf8.ts';
+import {
+  UTF8Encoder,
+  UTF8Decoder,
+  encodeUTF8String,
+  decodeUTF8String,
+} from './utf8.ts';
 
 export interface SubscribePacket {
   type: 'subscribe';
@@ -9,13 +15,13 @@ export interface SubscribePacket {
 
 export type Subscription = {
   topic: string;
-  qos: 0 | 1 | 2;
+  qos: QoS;
 };
 
 export default {
   encode(packet: SubscribePacket, utf8Encoder: UTF8Encoder) {
     const packetType = 8;
-    const flags = 2;
+    const flags = 0b0010; // bit 2 must be 1 in 3.1.1
 
     const variableHeader = [packet.id >> 8, packet.id & 0xff];
 
@@ -34,10 +40,38 @@ export default {
   },
 
   decode(
-    _buffer: Uint8Array,
-    _remainingStart: number,
-    _remainingLength: number
+    buffer: Uint8Array,
+    remainingStart: number,
+    _remainingLength: number,
+    utf8Decoder: UTF8Decoder
   ): SubscribePacket {
-    throw new Error('subscribe.decode is not implemented yet');
+    const idStart = remainingStart;
+    const id = (buffer[idStart] << 8) + buffer[idStart + 1];
+
+    const subscriptionsStart = idStart + 2;
+    const subscriptions: Subscription[] = [];
+
+    for (let i = subscriptionsStart; i < buffer.length; ) {
+      const topic = decodeUTF8String(buffer, i, utf8Decoder);
+      i += topic.length;
+
+      const qos = buffer[i];
+      i += 1;
+
+      if (qos !== 0 && qos !== 1 && qos !== 2) {
+        throw new Error('invalid qos');
+      }
+
+      subscriptions.push({
+        topic: topic.value,
+        qos,
+      });
+    }
+
+    return {
+      type: 'subscribe',
+      id,
+      subscriptions,
+    };
   },
 };

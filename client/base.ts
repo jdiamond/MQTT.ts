@@ -1,3 +1,4 @@
+import { QoS } from '../types.ts';
 import {
   encode,
   decode,
@@ -35,17 +36,20 @@ export type ReconnectOptions = {
   random?: boolean;
 };
 
-export type QoS = 0 | 1 | 2;
-
 export type PublishOptions = {
   dup?: boolean;
   qos?: QoS;
   retain?: boolean;
 };
 
-export type Subscription = {
+export type SubscriptionOption = {
   topic: string;
   qos?: QoS;
+};
+
+export type Subscription = {
+  topic: string;
+  qos: QoS;
 };
 
 type ConnectionStates =
@@ -74,6 +78,7 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
   timers: {
     [key: string]: number | undefined;
   } = {};
+  subscriptions: Subscription[] = [];
   unacknowledgedPublishes = new Map<
     number,
     {
@@ -201,7 +206,7 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
   }
 
   public async subscribe(
-    topic: Subscription | string | (Subscription | string)[],
+    topic: SubscriptionOption | string | (SubscriptionOption | string)[],
     qos?: QoS
   ): Promise<SubackPacket | void> {
     switch (this.connectionState) {
@@ -221,13 +226,18 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
         : { topic: sub, qos: qos || <QoS>0 };
     });
 
+    for (const sub of subs) {
+      // TODO: subscribe should replace existing subscriptions
+      this.subscriptions.push(sub);
+    }
+
     await this.send({
       type: 'subscribe',
       id: this.nextPacketId(),
       subscriptions: subs,
     });
 
-    // TODO: wait for suback here?
+    // TODO: wait for suback
   }
 
   public unsubscribe(topic: string) {
@@ -239,6 +249,8 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
           `should not be unsubscribing in ${this.connectionState} state`
         );
     }
+
+    // TODO: unsubscribe should remove existing subscriptions
 
     this.send({
       type: 'unsubscribe',
@@ -452,6 +464,7 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
       this.rejectConnect = null;
     }
 
+    this.sendSubscriptions();
     this.stopConnectTimer();
     this.startKeepAliveTimer();
   }
@@ -714,7 +727,20 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
     return !!this.timers[name];
   }
 
-  addUnacknowledgedPublishes(
+  protected async sendSubscriptions() {
+    // Only qos 0 subscriptions.
+    const subs = this.subscriptions.filter((sub) => sub.qos === 0);
+
+    if (subs.length > 0) {
+      await this.send({
+        type: 'subscribe',
+        id: this.nextPacketId(),
+        subscriptions: subs,
+      });
+    }
+  }
+
+  protected addUnacknowledgedPublishes(
     packet: PublishPacket,
     resolve: (val: PubackPacket) => void,
     reject: (err: Error) => void
