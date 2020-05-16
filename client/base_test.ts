@@ -1,6 +1,11 @@
 import { assertEquals } from 'https://deno.land/std@0.50.0/testing/asserts.ts';
 import { BaseClient, BaseClientOptions } from './base.ts';
-import { AnyPacket, PublishPacket, SubscribePacket } from '../packets/mod.ts';
+import {
+  AnyPacket,
+  PublishPacket,
+  SubscribePacket,
+  UnsubscribePacket,
+} from '../packets/mod.ts';
 
 type TestClientOptions = BaseClientOptions & {
   openRejects?: number;
@@ -419,7 +424,7 @@ Deno.test('connect rejects when retries is 0', async () => {
   assertEquals(connectRejected, true);
 });
 
-Deno.test('reconnecting', async () => {
+Deno.test('reconnecting resubscribes', async () => {
   const client = new TestClient();
 
   client.connect();
@@ -440,7 +445,12 @@ Deno.test('reconnecting', async () => {
 
   assertEquals(client.connectionState, 'connected');
 
-  client.subscribe('topic1');
+  client.subscribe(['topic1', 'topic2']);
+
+  assertEquals(client.subscriptions, [
+    { topic: 'topic1', qos: 0 },
+    { topic: 'topic2', qos: 0 },
+  ]);
 
   // Sleep a little to allow the subscribe packet to be sent.
   await sleep(1);
@@ -457,8 +467,23 @@ Deno.test('reconnecting', async () => {
     returnCodes: [0],
   });
 
-  assertEquals(client.subscriptions.length, 1);
-  assertEquals(client.subscriptions[0].topic, 'topic1');
+  client.unsubscribe('topic1');
+
+  assertEquals(client.subscriptions, [{ topic: 'topic2', qos: 0 }]);
+
+  // Sleep a little to allow the unsubscribe packet to be sent.
+  await sleep(1);
+
+  assertEquals(client.sentPackets[2].type, 'unsubscribe');
+  assertEquals(
+    (client.sentPackets[2] as UnsubscribePacket).topics[0],
+    'topic1'
+  );
+
+  client.receivePacket({
+    type: 'unsuback',
+    id: (client.sentPackets[2] as UnsubscribePacket).id,
+  });
 
   client.testCloseConnection();
 
@@ -471,7 +496,7 @@ Deno.test('reconnecting', async () => {
   // Sleep a little to allow the connect packet to be sent.
   await sleep(1);
 
-  assertEquals(client.sentPackets[2].type, 'connect');
+  assertEquals(client.sentPackets[3].type, 'connect');
   assertEquals(client.connectionState, 'waiting-for-connack');
 
   client.receivePacket({
@@ -485,9 +510,9 @@ Deno.test('reconnecting', async () => {
   // Sleep a little to allow the subscribe packet to be sent.
   await sleep(1);
 
-  assertEquals(client.sentPackets[3].type, 'subscribe');
+  assertEquals(client.sentPackets[4].type, 'subscribe');
   assertEquals(
-    (client.sentPackets[3] as SubscribePacket).subscriptions[0].topic,
-    'topic1'
+    (client.sentPackets[4] as SubscribePacket).subscriptions[0].topic,
+    'topic2'
   );
 });

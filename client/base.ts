@@ -242,6 +242,8 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
   }
 
   public unsubscribe(topic: string) {
+    // TODO: support array of topics
+
     switch (this.connectionState) {
       case 'connected':
         break;
@@ -251,7 +253,9 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
         );
     }
 
-    // TODO: unsubscribe should remove existing subscriptions
+    this.subscriptions = this.subscriptions.filter(
+      (sub) => sub.topic !== topic
+    );
 
     this.send({
       type: 'unsubscribe',
