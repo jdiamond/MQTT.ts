@@ -1,5 +1,10 @@
 import { encodeLength } from './length.ts';
-import { UTF8Encoder, encodeUTF8String } from './utf8.ts';
+import {
+  UTF8Encoder,
+  UTF8Decoder,
+  encodeUTF8String,
+  decodeUTF8String,
+} from './utf8.ts';
 
 export interface UnsubscribePacket {
   type: 'unsubscribe';
@@ -29,11 +34,28 @@ export default {
   },
 
   decode(
-    _buffer: Uint8Array,
-    _remainingStart: number,
-    _remainingLength: number
+    buffer: Uint8Array,
+    remainingStart: number,
+    _remainingLength: number,
+    utf8Decoder: UTF8Decoder
   ): UnsubscribePacket {
-    // TODO
-    throw new Error('unsubscribe.decode is not implemented yet');
+    const idStart = remainingStart;
+    const id = (buffer[idStart] << 8) + buffer[idStart + 1];
+
+    const topicsStart = idStart + 2;
+    const topics: string[] = [];
+
+    for (let i = topicsStart; i < buffer.length; ) {
+      const topic = decodeUTF8String(buffer, i, utf8Decoder);
+      i += topic.length;
+
+      topics.push(topic.value);
+    }
+
+    return {
+      type: 'unsubscribe',
+      id,
+      topics,
+    };
   },
 };

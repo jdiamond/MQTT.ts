@@ -4,9 +4,11 @@ export interface UnsubackPacket {
 }
 
 export default {
-  encode(_packet: UnsubackPacket) {
-    // TODO
-    throw new Error('unsuback.encode is not implemented yet');
+  encode(packet: UnsubackPacket) {
+    const packetType = 11;
+    const flags = 0;
+
+    return [(packetType << 4) + flags, 2, packet.id >> 8, packet.id & 0xff];
   },
 
   decode(
