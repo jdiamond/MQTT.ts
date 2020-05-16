@@ -1,6 +1,6 @@
 {
   "name": "@jdiamond/mqtt",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "MQTT in TypeScript for Deno, Node.js, and browsers",
   "license": "MIT",
   "homepage": "https://github.com/jdiamond/MQTT.ts",
@@ -17,13 +17,13 @@
   "keywords": [
     "MQTT"
   ],
-  "main": "index.js",
-  "module": "index.mjs",
+  "main": "node.js",
+  "module": "node.mjs",
   "files": [
     "browser.min.js",
     "browser.min.mjs",
-    "index.js",
-    "index.mjs"
+    "node.js",
+    "node.mjs"
   ],
   "dependencies": {},
   "devDependencies": {
@@ -35,13 +35,15 @@
   "scripts": {
     "prepack": "npm run build",
     "build": "npm run build:browser && npm run build:node",
-    "build:browser": "npm run build:browser:esm && npm run build:browser:esm:min && npm run build:browser:umd && npm run build:browser:umd:min",
-    "build:browser:esm": "deno bundle ../browser.ts browser.mjs",
+    "build:browser": "npm run build:browser:bundle && npm run build:browser:esm && npm run build:browser:esm:min && npm run build:browser:umd && npm run build:browser:umd:min",
+    "build:browser:bundle": "deno bundle ../browser.ts browser.bundle.js",
+    "build:browser:esm": "babel --config-file ./browser-esm.json browser.bundle.js > browser.mjs",
     "build:browser:esm:min": "terser browser.mjs -o browser.min.mjs",
-    "build:browser:umd": "babel --config-file ./browser.json browser.mjs > browser.js",
+    "build:browser:umd": "babel --config-file ./browser-umd.json browser.bundle.js > browser.js",
     "build:browser:umd:min": "terser browser.js -o browser.min.js",
-    "build:node": "npm run build:node:esm && npm run build:node:cjs",
-    "build:node:esm": "deno bundle ../node.ts index.mjs",
-    "build:node:cjs": "babel --config-file ./node.json index.mjs > index.js"
+    "build:node": "npm run build:node:bundle && npm run build:node:esm && npm run build:node:cjs",
+    "build:node:bundle": "deno bundle ../node.ts node.bundle.js",
+    "build:node:esm": "babel --config-file ./node-esm.json node.bundle.js > node.mjs",
+    "build:node:cjs": "babel --config-file ./node-cjs.json node.bundle.js > node.js"
   }
 }

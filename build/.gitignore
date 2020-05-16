@@ -1,12 +1,14 @@
 /node_modules
 /package-lock.json
 
-# Node.js build:
-/index.mjs
-/index.js
-
 # Browser build:
+/browser.bundle.js
 /browser.mjs
 /browser.min.mjs
 /browser.js
 /browser.min.js
+
+# Node.js build:
+/node.bundle.js
+/node.mjs
+/node.js
