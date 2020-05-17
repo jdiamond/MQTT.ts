@@ -4,8 +4,7 @@ import { Client } from '../../mod.ts';
 
 async function main() {
   const client = new Client({
-    host: 'localhost',
-    port: 1883,
+    url: 'mqtt://localhost',
   });
 
   await client.connect();

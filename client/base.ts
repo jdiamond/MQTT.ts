@@ -17,8 +17,6 @@ import { UTF8Encoder, UTF8Decoder } from '../packets/utf8.ts';
 
 export type BaseClientOptions = {
   url?: string;
-  host?: string;
-  port?: number;
   clientId?: string | Function;
   clean?: boolean;
   keepAlive?: number;
@@ -797,6 +795,35 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
     }
 
     return clientId;
+  }
+
+  protected parseURL(
+    url: string,
+    defaultPorts: { [protocol: string]: number }
+  ) {
+    let parsed = new URL(url);
+
+    const protocol = parsed.protocol.slice(0, -1);
+
+    if (!defaultPorts[protocol]) {
+      throw new Error(`unsupported protocol: ${protocol}`);
+    }
+
+    // When Deno and browsers parse "mqtt:"" URLs, they return
+    // "//host:port/path" in the `pathname` property and leave `host`,
+    // `hostname`, and `port` blank. This works around that by re-parsing as an
+    // "http:" URL and then changing the protocol back to "mqtt:". Node.js
+    // doesn't behave like this.
+    if (!parsed.hostname && parsed.pathname.startsWith('//')) {
+      parsed = new URL(url.replace(`${protocol}:`, 'http:'));
+      parsed.protocol = `${protocol}:`;
+    }
+
+    if (!parsed.port) {
+      parsed.port = defaultPorts[protocol].toString();
+    }
+
+    return parsed;
   }
 
   protected nextPacketId() {

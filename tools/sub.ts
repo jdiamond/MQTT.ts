@@ -8,37 +8,35 @@ function usage() {
 Options:
  --clean          clean session (--no-clean to disable) [true]
  --client-id/-i   client id [random]
- --host/-h        broker host [localhost]
- --port/-p        broker port [1883]
  --keep-alive/-k  keep alive in seconds [60]
  --log-level/-L   level to log (info or debug) [info];
  --qos/-q         qos [0]
  --topic/-t       topic filter (can be multiple) [#]
+ --url/-u         broker url [mqtt://localhost]
  --verbose/-v     print topic before message [false]`);
 }
 
 async function main() {
   const args = parse(Deno.args, {
     boolean: ['clean', 'help', 'verbose'],
-    string: ['host', 'topic'],
+    string: ['topic', 'url'],
     alias: {
-      h: 'host',
+      h: 'help',
       i: 'client-id',
       k: 'keep-alive',
       L: 'log-level',
-      p: 'port',
       t: 'topic',
+      u: 'url',
       v: 'verbose',
     },
     default: {
       clean: true,
       help: false,
-      host: 'localhost',
       'keep-alive': 60,
       'log-level': 'info',
-      port: 1883,
       qos: 0,
       topic: '#',
+      url: 'mqtt://localhost',
       verbose: false,
     },
   });
@@ -53,8 +51,7 @@ async function main() {
   const logger = await setupLogger(levelName);
 
   const client = new Client({
-    host: args.host,
-    port: args.port,
+    url: args.url,
     clientId: args['client-id'],
     clean: args.clean,
     keepAlive: args['keep-alive'],

@@ -3,37 +3,35 @@ import { Client } from '../mod.ts';
 import { setupLogger } from './logger.ts';
 
 function usage() {
-  console.log(`Usage: pub.ts -h localhost -p 1883 -t topic/to/publish/to -m "message to publish"
+  console.log(`Usage: pub.ts -u mqtt://localhost -t topic/to/publish/to -m "message to publish"
 
 Options:
- --host/-h       broker host [localhost]
- --log-level/-L  level to log (info or debug) [info]
- --message/-m    message payload
- --port/-p       broker port [1883]
- --retain/-r     retain message [false]
- --topic/-t      topic`);
+--log-level/-L  level to log (info or debug) [info]
+--message/-m    message payload
+--retain/-r     retain message [false]
+--topic/-t      topic
+--url/-u        broker url [mqtt://localhost]`);
 }
 
 async function main() {
   const args = parse(Deno.args, {
     boolean: ['help', 'retain'],
-    string: ['host', 'message', 'topic'],
+    string: ['message', 'topic', 'url'],
     alias: {
-      h: 'host',
+      h: 'help',
       L: 'log-level',
       m: 'message',
-      p: 'port',
       q: 'qos',
       r: 'retain',
       t: 'topic',
+      u: 'url',
     },
     default: {
       help: false,
-      host: 'localhost',
       'log-level': 'info',
-      port: 1883,
       qos: 0,
       retain: false,
+      url: 'mqtt://localhost',
     },
   });
 
@@ -62,8 +60,7 @@ async function main() {
   const logger = await setupLogger(levelName);
 
   const client = new Client({
-    host: args.host,
-    port: args.port,
+    url: args.url,
     logger: logger.debug.bind(logger),
   });
 

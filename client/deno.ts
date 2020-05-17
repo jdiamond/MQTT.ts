@@ -5,6 +5,10 @@ export type ClientOptions = BaseClientOptions & {};
 
 const DEFAULT_BUF_SIZE = 4096;
 
+const defaultPorts: { [protocol: string]: number } = {
+  mqtt: 1883,
+};
+
 const utf8Encoder = new TextEncoder();
 const utf8Decoder = new TextDecoder();
 
@@ -17,12 +21,17 @@ export class Client extends BaseClient<ClientOptions> {
   }
 
   protected async open() {
-    const hostname = this.options.host || 'localhost';
-    const port = this.options.port || 1883;
+    const url = this.parseURL(
+      this.options.url || 'mqtt://localhost',
+      defaultPorts
+    );
 
-    this.log(`opening connection to ${hostname}:${port}`);
+    this.log(`opening connection to ${url}`);
 
-    const conn = await Deno.connect({ hostname, port });
+    const conn = await Deno.connect({
+      hostname: url.hostname,
+      port: Number(url.port),
+    });
 
     this.conn = conn;
     this.closing = false;

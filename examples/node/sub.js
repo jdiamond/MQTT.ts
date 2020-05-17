@@ -1,12 +1,11 @@
 #!/usr/bin/env node
 
-const { Client } = require('@jdiamond/mqtt');
-//const { Client } = require('../../build/index.js');
+// const { Client } = require('@jdiamond/mqtt');
+const { Client } = require('../../build/node.js');
 
 async function main() {
   const client = new Client({
-    host: 'localhost',
-    port: 1883,
+    url: 'mqtt://localhost',
   });
 
   await client.connect();

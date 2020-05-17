@@ -14,6 +14,10 @@ declare class WebSocket {
   close(): void;
 }
 
+const defaultPorts: { [protocol: string]: number } = {
+  ws: 80,
+};
+
 const utf8Encoder = new TextEncoder();
 const utf8Decoder = new TextDecoder();
 
@@ -25,15 +29,17 @@ export class Client extends BaseClient<ClientOptions> {
   }
 
   protected async open() {
-    const url =
-      this.options.url || `ws://${this.options.host}:${this.options.port}`;
+    const url = this.parseURL(
+      this.options.url || 'ws://localhost',
+      defaultPorts
+    );
 
     this.log(`opening connection to ${url}`);
 
     let closed = true;
 
     return new Promise<void>((resolve, reject) => {
-      const ws = new WebSocket(url, 'mqtt');
+      const ws = new WebSocket(url.toString(), 'mqtt');
 
       ws.binaryType = 'arraybuffer';
 
