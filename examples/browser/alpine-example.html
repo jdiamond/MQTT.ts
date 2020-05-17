@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>MQTT.ts Browser Example</title>
+
+    <script src="alpine-example.js" type="module"></script>
+
+    <!-- Alpine.js is not an ES module. 😢 -->
+    <script src="https://unpkg.com/alpinejs" defer></script>
+  </head>
+  <body>
+    <div
+      x-data="{
+        url: 'ws://localhost:9001',
+        client: null,
+        subs: [
+          { topic: 'foo/#', qos: 0, subscribed: false }
+        ],
+        topic: 'foo/bar',
+        payload: 'baz',
+        messages: []
+      }"
+      @messagereceived.window="
+        console.log($event.detail);
+        messages.push($event.detail)
+      "
+    >
+      <div>
+        <label>Broker URL</label>
+        <input type="text" x-model="url" />
+        <button
+          @click="
+            client = mqtt.connect(url)
+          "
+        >
+          Connect
+        </button>
+        <button
+          @click="
+            client.disconnect()
+          "
+        >
+          Disconnect
+        </button>
+      </div>
+
+      <template x-for="sub in subs">
+        <div>
+          <label>Topic Filter</label>
+          <input type="text" x-model="sub.topic" />
+          <button
+            @click="
+              client.subscribe(sub.topic, sub.qos)
+            "
+          >
+            Subscribe
+          </button>
+          <button
+            @click="
+              client.unsubscribe(sub.topic)
+            "
+          >
+            Unsubscribe
+          </button>
+          <button
+            @click="
+              subs = subs.filter((s) => s !== sub)
+            "
+          >
+            Remove
+          </button>
+        </div>
+      </template>
+
+      <button
+        @click="
+          subs.push({ topic: '#', qos: 0, subscribed: false })
+        "
+      >
+        Add Subscription
+      </button>
+
+      <div>
+        <label>Topic</label>
+        <input type="text" x-model="topic" />
+        <label>Payload</label>
+        <input type="text" x-model="payload" />
+        <button
+          @click="
+            client.publish(topic, payload)
+          "
+        >
+          Publish
+        </button>
+      </div>
+
+      <ul>
+        <template x-for="(message, index) in messages">
+          <li :key="index">
+            <span x-text="message.topic"></span>
+            <span x-text="message.payload"></span>
+          </li>
+        </template>
+      </ul>
+    </div>
+  </body>
+</html>
