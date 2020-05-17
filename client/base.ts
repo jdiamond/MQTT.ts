@@ -71,16 +71,14 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
   keepAlive: number;
   connectionState: ConnectionStates;
   reconnectAttempt: number;
+  subscriptions: Subscription[] = [];
 
   private lastPacketId: number;
   private lastPacketTime: Date | undefined;
 
   private buffer: Uint8Array | null = null;
 
-  resolveConnect: any;
-  rejectConnect: any;
-
-  subscriptions: Subscription[] = [];
+  unacknowledgedConnect?: Deferred<ConnackPacket, void>;
 
   private unacknowledgedPublishes = new Map<
     number,
@@ -144,10 +142,9 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
 
     this.changeState('connecting');
 
-    const deferred = new Promise<ConnackPacket>((resolve, reject) => {
-      this.resolveConnect = resolve;
-      this.rejectConnect = reject;
-    });
+    const deferred = new Deferred<ConnackPacket, void>();
+
+    this.unacknowledgedConnect = deferred;
 
     try {
       await this.open();
@@ -157,7 +154,7 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
       this.connectionFailed();
     }
 
-    return deferred;
+    return deferred.promise;
   }
 
   // Same thing as connect but resolves immediately instead of when the
@@ -509,13 +506,10 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
 
     this.changeState('connected');
 
-    if (this.resolveConnect) {
+    if (this.unacknowledgedConnect) {
       this.log('resolving initial connect');
 
-      this.resolveConnect(packet);
-
-      this.resolveConnect = null;
-      this.rejectConnect = null;
+      this.unacknowledgedConnect.resolve(packet);
     }
 
     // TODO: flush publishes queued while not connected
@@ -640,13 +634,10 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
   }
 
   protected notifyConnectRejected(err: Error) {
-    if (this.rejectConnect) {
+    if (this.unacknowledgedConnect) {
       this.log('rejecting initial connect');
 
-      this.rejectConnect(err);
-
-      this.resolveConnect = null;
-      this.rejectConnect = null;
+      this.unacknowledgedConnect.reject(err);
     }
   }
 
@@ -936,9 +927,9 @@ class Deferred<ResolveType, DataType> {
   promise: Promise<ResolveType>;
   resolve!: (val: ResolveType) => void;
   reject!: (err: Error) => void;
-  data: DataType;
+  data?: DataType;
 
-  constructor(data: DataType) {
+  constructor(data?: DataType) {
     this.promise = new Promise((resolve, reject) => {
       this.resolve = resolve;
       this.reject = reject;
