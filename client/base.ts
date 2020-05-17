@@ -71,15 +71,21 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
   keepAlive: number;
   connectionState: ConnectionStates;
   reconnectAttempt: number;
+
   private lastPacketId: number;
   private lastPacketTime: Date | undefined;
+
   private buffer: Uint8Array | null = null;
+
   resolveConnect: any;
   rejectConnect: any;
-  private timers: {
-    [key: string]: number | undefined;
-  } = {};
+
   subscriptions: Subscription[] = [];
+
+  private unacknowledgedPublishes = new Map<
+    number,
+    Deferred<PubackPacket, PublishPacket>
+  >();
   private unacknowledgedSubscribes = new Map<
     number,
     Deferred<SubackPacket, SubscribePacket>
@@ -88,15 +94,13 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
     number,
     Deferred<UnsubackPacket, UnsubscribePacket>
   >();
-  private unacknowledgedPublishes = new Map<
-    number,
-    {
-      packet: PublishPacket;
-      resolve: (val: PubackPacket) => void;
-      reject: (err: Error) => void;
-    }
-  >();
+
   eventListeners: Map<string, Function[]> = new Map();
+
+  private timers: {
+    [key: string]: number | undefined;
+  } = {};
+
   log: (msg: string, ...args: unknown[]) => void;
 
   // TODO: combine these into one defaults property?
@@ -183,7 +187,7 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
     topic: string,
     payload: any,
     options?: PublishOptions
-  ): Promise<PubackPacket | undefined> {
+  ): Promise<PubackPacket | void> {
     switch (this.connectionState) {
       case 'connected':
         break;
@@ -194,25 +198,34 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
         );
     }
 
+    const dup = (options && options.dup) || false;
     const qos = (options && options.qos) || 0;
+    const retain = (options && options.retain) || false;
     const id = qos > 0 ? this.nextPacketId() : 0;
+
     const packet: PublishPacket = {
       type: 'publish',
-      dup: (options && options.dup) || false,
-      retain: (options && options.retain) || false,
+      dup,
+      qos,
+      retain,
       topic,
       payload,
-      qos,
       id,
     };
 
-    await this.send(packet);
+    let result = undefined;
 
     if (qos > 0) {
-      return new Promise((resolve, reject) => {
-        this.addUnacknowledgedPublishes(packet, resolve, reject);
-      });
+      const deferred = new Deferred<PubackPacket, PublishPacket>(packet);
+
+      this.unacknowledgedPublishes.set(id, deferred);
+
+      result = deferred.promise;
     }
+
+    await this.send(packet);
+
+    return result;
   }
 
   public async subscribe(
@@ -254,13 +267,13 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
       subscriptions: subs,
     };
 
-    await this.send(subscribePacket);
-
     const deferred = new Deferred<SubackPacket, SubscribePacket>(
       subscribePacket
     );
 
     this.unacknowledgedSubscribes.set(subscribePacket.id, deferred);
+
+    await this.send(subscribePacket);
 
     return deferred.promise;
   }
@@ -287,13 +300,13 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
       topics: [topic],
     };
 
-    await this.send(unsubscribePacket);
-
     const deferred = new Deferred<UnsubackPacket, UnsubscribePacket>(
       unsubscribePacket
     );
 
     this.unacknowledgedUnsubscribes.set(unsubscribePacket.id, deferred);
+
+    await this.send(unsubscribePacket);
 
     return deferred.promise;
   }
@@ -541,12 +554,13 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
   }
 
   protected handlePuback(packet: PubackPacket) {
-    const ack = this.unacknowledgedPublishes.get(packet.id);
+    const deferred = this.unacknowledgedPublishes.get(packet.id);
 
-    if (ack) {
-      const { resolve } = ack;
+    if (deferred) {
       this.unacknowledgedPublishes.delete(packet.id);
-      resolve(packet);
+      deferred.resolve(packet);
+    } else {
+      this.log(`received puback packet with unrecognized id ${packet.id}`);
     }
   }
 
@@ -797,14 +811,6 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
         subscriptions: subs,
       });
     }
-  }
-
-  protected addUnacknowledgedPublishes(
-    packet: PublishPacket,
-    resolve: (val: PubackPacket) => void,
-    reject: (err: Error) => void
-  ) {
-    this.unacknowledgedPublishes.set(packet.id!, { packet, resolve, reject });
   }
 
   // Utility methods
