@@ -1,0 +1,8 @@
+{
+  "name": "@jdiamond/mqtt-node",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "@jdiamond/mqtt": "0.0.2"
+  }
+}

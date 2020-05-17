@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-const { Client } = require('../../build/index.js');
+const { Client } = require('@jdiamond/mqtt');
+//const { Client } = require('../../build/index.js');
 
 async function main() {
   const client = new Client({
