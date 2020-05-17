@@ -1,6 +1,6 @@
 {
   "name": "@jdiamond/mqtt",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "MQTT in TypeScript for Deno, Node.js, and browsers",
   "license": "MIT",
   "homepage": "https://github.com/jdiamond/MQTT.ts",
@@ -17,8 +17,17 @@
   "keywords": [
     "MQTT"
   ],
-  "main": "node.js",
-  "module": "node.mjs",
+  "main": "./node.js",
+  "module": "./node.mjs",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "require": "./node.js",
+      "import": "./node.mjs",
+      "default": "./node.js"
+    }
+  },
+  "unpkg": "./browser.min.mjs",
   "files": [
     "browser.min.js",
     "browser.min.mjs",
