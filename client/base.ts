@@ -16,6 +16,7 @@ import {
 import { UTF8Encoder, UTF8Decoder } from '../packets/utf8.ts';
 
 export type BaseClientOptions = {
+  url?: string;
   host?: string;
   port?: number;
   clientId?: string | Function;

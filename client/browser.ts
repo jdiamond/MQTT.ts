@@ -25,7 +25,8 @@ export class Client extends BaseClient<ClientOptions> {
   }
 
   protected async open() {
-    const url = `ws://${this.options.host}:${this.options.port}`;
+    const url =
+      this.options.url || `ws://${this.options.host}:${this.options.port}`;
 
     this.log(`opening connection to ${url}`);
 
