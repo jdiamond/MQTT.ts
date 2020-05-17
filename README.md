@@ -69,3 +69,6 @@ Protocol Links:
 - address all TODO comments in code
 - types for node.js and browser builds
 - benchmarking and performance improvements
+- round robin connect to multiple brokers
+- mqtts for deno and node clients
+- use native event target/emitter classes

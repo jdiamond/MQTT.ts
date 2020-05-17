@@ -445,7 +445,7 @@ Deno.test('reconnecting resubscribes', async () => {
 
   assertEquals(client.connectionState, 'connected');
 
-  client.subscribe(['topic1', 'topic2']);
+  const suback1Promise = client.subscribe(['topic1', 'topic2']);
 
   assertEquals(client.subscriptions, [
     { topic: 'topic1', qos: 0 },
@@ -455,38 +455,47 @@ Deno.test('reconnecting resubscribes', async () => {
   // Sleep a little to allow the subscribe packet to be sent.
   await sleep(1);
 
-  assertEquals(client.sentPackets[1].type, 'subscribe');
-  assertEquals((client.sentPackets[1] as SubscribePacket).subscriptions, [
+  const subscribe1 = client.sentPackets[1] as SubscribePacket;
+
+  assertEquals(subscribe1.type, 'subscribe');
+  assertEquals(subscribe1.subscriptions, [
     { topic: 'topic1', qos: 0 },
     { topic: 'topic2', qos: 0 },
   ]);
 
   client.receivePacket({
     type: 'suback',
-    id: (client.sentPackets[1] as SubscribePacket).id,
+    id: subscribe1.id,
     returnCodes: [0, 0],
   });
 
-  client.unsubscribe('topic1');
+  const suback1 = await suback1Promise;
+
+  assertEquals(suback1.id, subscribe1.id);
+
+  const unsubackPromise = client.unsubscribe('topic1');
 
   assertEquals(client.subscriptions, [{ topic: 'topic2', qos: 0 }]);
 
   // Sleep a little to allow the unsubscribe packet to be sent.
   await sleep(1);
 
-  assertEquals(client.sentPackets[2].type, 'unsubscribe');
-  assertEquals(
-    (client.sentPackets[2] as UnsubscribePacket).topics[0],
-    'topic1'
-  );
+  const unsubscribe = client.sentPackets[2] as UnsubscribePacket;
+
+  assertEquals(unsubscribe.type, 'unsubscribe');
+  assertEquals(unsubscribe.topics[0], 'topic1');
 
   client.receivePacket({
     type: 'unsuback',
-    id: (client.sentPackets[2] as UnsubscribePacket).id,
+    id: unsubscribe.id,
   });
 
+  const unsuback = await unsubackPromise;
+
+  assertEquals(unsuback.id, unsubscribe.id);
+
   // Subscribing to topic2 again (which we are still subscribe to)...
-  client.subscribe('topic2');
+  const suback2Promise = client.subscribe('topic2');
 
   // ...should not add to the list of known subscriptions.
   assertEquals(client.subscriptions, [{ topic: 'topic2', qos: 0 }]);
@@ -494,16 +503,20 @@ Deno.test('reconnecting resubscribes', async () => {
   // Sleep a little to allow the subscribe packet to be sent.
   await sleep(1);
 
-  assertEquals(client.sentPackets[3].type, 'subscribe');
-  assertEquals((client.sentPackets[3] as SubscribePacket).subscriptions, [
-    { topic: 'topic2', qos: 0 },
-  ]);
+  const subscribe2 = client.sentPackets[3] as SubscribePacket;
+
+  assertEquals(subscribe2.type, 'subscribe');
+  assertEquals(subscribe2.subscriptions, [{ topic: 'topic2', qos: 0 }]);
 
   client.receivePacket({
     type: 'suback',
-    id: (client.sentPackets[3] as SubscribePacket).id,
+    id: subscribe2.id,
     returnCodes: [0],
   });
+
+  const suback2 = await suback2Promise;
+
+  assertEquals(suback2.id, subscribe2.id);
 
   // Break the connection so we can test resubscribing.
   client.testCloseConnection();

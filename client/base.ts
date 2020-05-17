@@ -10,7 +10,9 @@ import {
   PubrecPacket,
   PubrelPacket,
   PubcompPacket,
+  SubscribePacket,
   SubackPacket,
+  UnsubscribePacket,
   UnsubackPacket,
 } from '../packets/mod.ts';
 import { UTF8Encoder, UTF8Decoder } from '../packets/utf8.ts';
@@ -69,16 +71,24 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
   keepAlive: number;
   connectionState: ConnectionStates;
   reconnectAttempt: number;
-  lastPacketId: number;
-  lastPacketTime: Date | undefined;
-  buffer: Uint8Array | null = null;
+  private lastPacketId: number;
+  private lastPacketTime: Date | undefined;
+  private buffer: Uint8Array | null = null;
   resolveConnect: any;
   rejectConnect: any;
-  timers: {
+  private timers: {
     [key: string]: number | undefined;
   } = {};
   subscriptions: Subscription[] = [];
-  unacknowledgedPublishes = new Map<
+  private unacknowledgedSubscribes = new Map<
+    number,
+    Deferred<SubackPacket, SubscribePacket>
+  >();
+  private unacknowledgedUnsubscribes = new Map<
+    number,
+    Deferred<UnsubackPacket, UnsubscribePacket>
+  >();
+  private unacknowledgedPublishes = new Map<
     number,
     {
       packet: PublishPacket;
@@ -153,7 +163,6 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
       case 'offline':
         break;
       default:
-        // TODO: queue publishes while not connected
         throw new Error(
           `should not be connecting in ${this.connectionState} state`
         );
@@ -179,6 +188,7 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
       case 'connected':
         break;
       default:
+        // TODO: queue publishes while not connected
         throw new Error(
           `should not be publishing in ${this.connectionState} state`
         );
@@ -208,7 +218,7 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
   public async subscribe(
     topic: SubscriptionOption | string | (SubscriptionOption | string)[],
     qos?: QoS
-  ): Promise<SubackPacket | void> {
+  ): Promise<SubackPacket> {
     switch (this.connectionState) {
       case 'connected':
         break;
@@ -238,16 +248,24 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
       this.subscriptions.push(sub);
     }
 
-    await this.send({
+    const subscribePacket: SubscribePacket = {
       type: 'subscribe',
       id: this.nextPacketId(),
       subscriptions: subs,
-    });
+    };
 
-    // TODO: wait for suback
+    await this.send(subscribePacket);
+
+    const deferred = new Deferred<SubackPacket, SubscribePacket>(
+      subscribePacket
+    );
+
+    this.unacknowledgedSubscribes.set(subscribePacket.id, deferred);
+
+    return deferred.promise;
   }
 
-  public unsubscribe(topic: string) {
+  public async unsubscribe(topic: string): Promise<UnsubackPacket> {
     // TODO: support array of topics
 
     switch (this.connectionState) {
@@ -263,11 +281,21 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
       (sub) => sub.topic !== topic
     );
 
-    this.send({
+    const unsubscribePacket: UnsubscribePacket = {
       type: 'unsubscribe',
       id: this.nextPacketId(),
       topics: [topic],
-    });
+    };
+
+    await this.send(unsubscribePacket);
+
+    const deferred = new Deferred<UnsubackPacket, UnsubscribePacket>(
+      unsubscribePacket
+    );
+
+    this.unacknowledgedUnsubscribes.set(unsubscribePacket.id, deferred);
+
+    return deferred.promise;
   }
 
   public async disconnect() {
@@ -542,13 +570,28 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
     // TODO: mark message as completely acknowledged
   }
 
-  protected handleSuback(_packet: SubackPacket) {
+  protected handleSuback(packet: SubackPacket) {
+    const deferred = this.unacknowledgedSubscribes.get(packet.id);
+
     // TODO: verify returnCodes length matches subscriptions.length
-    // TODO: mark subscription as acknowledged
+
+    if (deferred) {
+      this.unacknowledgedSubscribes.delete(packet.id);
+      deferred.resolve(packet);
+    } else {
+      this.log(`received suback packet with unrecognized id ${packet.id}`);
+    }
   }
 
-  protected handleUnsuback(_packet: UnsubackPacket) {
-    // TODO: mark unsubscription as acknowledged
+  protected handleUnsuback(packet: UnsubackPacket) {
+    const deferred = this.unacknowledgedUnsubscribes.get(packet.id);
+
+    if (deferred) {
+      this.unacknowledgedUnsubscribes.delete(packet.id);
+      deferred.resolve(packet);
+    } else {
+      this.log(`received unsuback packet with unrecognized id ${packet.id}`);
+    }
   }
 
   protected startConnectTimer() {
@@ -809,11 +852,10 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
       throw new Error(`unsupported protocol: ${protocol}`);
     }
 
-    // When Deno and browsers parse "mqtt:"" URLs, they return
-    // "//host:port/path" in the `pathname` property and leave `host`,
-    // `hostname`, and `port` blank. This works around that by re-parsing as an
-    // "http:" URL and then changing the protocol back to "mqtt:". Node.js
-    // doesn't behave like this.
+    // When Deno and browsers parse "mqtt:" URLs, they return "//host:port/path"
+    // in the `pathname` property and leave `host`, `hostname`, and `port`
+    // blank. This works around that by re-parsing as an "http:" URL and then
+    // changing the protocol back to "mqtt:". Node.js doesn't behave like this.
     if (!parsed.hostname && parsed.pathname.startsWith('//')) {
       parsed = new URL(url.replace(`${protocol}:`, 'http:'));
       parsed.protocol = `${protocol}:`;
@@ -881,5 +923,20 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
         listener(...args);
       }
     }
+  }
+}
+
+class Deferred<ResolveType, DataType> {
+  promise: Promise<ResolveType>;
+  resolve!: (val: ResolveType) => void;
+  reject!: (err: Error) => void;
+  data: DataType;
+
+  constructor(data: DataType) {
+    this.promise = new Promise((resolve, reject) => {
+      this.resolve = resolve;
+      this.reject = reject;
+    });
+    this.data = data;
   }
 }

@@ -66,7 +66,7 @@ async function main() {
 
   await client.connect();
 
-  logger.info(`connected to ${args.host}:${args.port}`);
+  logger.info(`connected to ${args.url}`);
 
   const puback = await client.publish(args.topic, args.message, {
     qos: args.qos,

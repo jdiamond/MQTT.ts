@@ -47,7 +47,6 @@ async function main() {
   }
 
   const levelName = args['log-level'].toUpperCase();
-
   const logger = await setupLogger(levelName);
 
   const client = new Client({
@@ -67,13 +66,17 @@ async function main() {
 
   await client.connect();
 
-  logger.info(`connected to ${args.host}:${args.port}`);
+  logger.info(`connected to ${args.url}`);
 
-  const suback = await client.subscribe(args.topic, args.qos);
+  const topicFilters = Array.isArray(args.topic) ? args.topic : [args.topic];
 
-  if (suback) {
-    logger.info(`received suback for topic ${args.topic}`);
-  }
+  const suback = await client.subscribe(topicFilters, args.qos);
+
+  logger.info(
+    `received suback for topic filters ${topicFilters
+      .map((tf) => `"${tf}"`)
+      .join(', ')}, return codes: ${suback.returnCodes.join(', ')}`
+  );
 }
 
 main();
