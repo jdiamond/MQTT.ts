@@ -2,11 +2,43 @@
 
 This is an implementation of the MQTT 3.1.1 protocol for [Deno](https://deno.land/).
 
-It is _not_ a port of the excellent [MQTT.js](https://github.com/mqttjs/MQTT.js) package. I wrote it for "fun", originally using [Flow](https://flow.org/), but never finished and then forgot about it. When I saw there was no MQTT modules for Deno, I decided to convert it to TypeScript as an excuse to learn Deno.
+It is _not_ a port of the excellent [MQTT.js](https://github.com/mqttjs/MQTT.js) package. I wrote it for "fun", originally using [Flow](https://flow.org/), but never finished and then forgot about it. When I saw there were no MQTT modules for Deno, I decided to convert it to TypeScript as an exercise in learning Deno.
 
-This is not complete, but it can connect, publish, and subscribe.
+Since the core of the library has no dependencies, it wasn't too difficult to add support for Node.js and browsers so why not?
 
-Tested with Deno 1.0.0.
+## Deno
+
+The "raw" TypeScript files are import'able by Deno.
+
+The Deno `Client` uses `Deno.connect` to create TCP connections so `--allow-net` is required when running code using this module.
+
+Look in [examples/deno](examples/deno) to see examples of using the client.
+
+## Node.js
+
+The Node.js `Client` uses the `net` module to create TCP connections.
+
+This build is published to npm as [@jdiamond/mqtt](https://www.npmjs.com/package/@jdiamond/mqtt) and can be imported like any normal npm package.
+
+Examples in [examples/node](examples/node).
+
+## Browsers
+
+The browser `Client` uses a `WebSocket` object to connect to a broker that supports MQTT over WebSockets.
+
+This build is published to npm as [@jdiamond/mqtt](https://www.npmjs.com/package/@jdiamond/mqtt) and available via unpkg.com here:
+
+https://unpkg.com/@jdiamond/mqtt
+
+The UMD build for older browsers is available here:
+
+https://unpkg.com/browse/@jdiamond/mqtt/browser.min.js
+
+Example in [examples/browser](examples/browser).
+
+## Development
+
+Requires Deno 1.0.0.
 
 To run the unit tests:
 
@@ -28,40 +60,6 @@ Protocol Links:
 - 3.1.1: https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html
 - 3.1: https://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html
 
-## Deno
-
-The "raw" TypeScript files are import'able by Deno.
-
-The Deno `Client` uses `Deno.connect` to create TCP connections.
-
-Look in [examples/deno](examples/deno) to see examples of using the client.
-
-## Node.js
-
-A Node.js build can be made like this:
-
-```
-cd build
-npm run build:node
-```
-
-The Node.js `Client` uses the `net` module to create TCP connections.
-
-Look in [examples/node](examples/node) to see examples of using it.
-
-## Browser
-
-A browser build can be made like this:
-
-```
-cd build
-npm run build:browser
-```
-
-The browser `Client` uses a `WebSocket` object to connect to a broker that supports MQTT over WebSockets.
-
-The [examples/browser](examples/browser) folder contains an example using it.
-
 ## TODO
 
 - quick start examples
@@ -69,6 +67,5 @@ The [examples/browser](examples/browser) folder contains an example using it.
 - also support 3.1 and 5.0
 - async iterators for messages matching topic patterns
 - address all TODO comments in code
-- npm package for node.js and browser builds
-- check unpkg works with npm package
 - types for node.js and browser builds
+- benchmarking and performance improvements
