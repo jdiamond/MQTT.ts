@@ -5,6 +5,8 @@ import {
   PublishPacket,
   SubscribePacket,
   UnsubscribePacket,
+  encode,
+  decode,
 } from '../packets/mod.ts';
 
 type TestClientOptions = BaseClientOptions & {
@@ -29,7 +31,7 @@ class TestClient extends BaseClient<TestClientOptions> {
 
   // These methods must be overridden by BaseClient subclasses:
 
-  async open() {
+  protected async open() {
     this.openCalls++;
 
     if (
@@ -40,30 +42,30 @@ class TestClient extends BaseClient<TestClientOptions> {
     }
   }
 
-  async write(bytes: Uint8Array) {
+  protected async write(bytes: Uint8Array) {
     const packet = this.decode(bytes);
     this.sentPackets.push(packet!);
   }
 
-  async close() {
+  protected async close() {
     this.connectionClosed();
   }
 
-  encode(packet: AnyPacket) {
+  protected encode(packet: AnyPacket) {
     return super.encode(packet, utf8Encoder);
   }
 
-  decode(bytes: Uint8Array) {
+  protected decode(bytes: Uint8Array) {
     return super.decode(bytes, utf8Decoder);
   }
 
   // Helper method to simulate receiving bytes for a packet from the server.
-  receivePacket(packet: AnyPacket, options: { trickle?: boolean } = {}) {
-    this.receiveBytes(this.encode(packet), options);
+  testReceivePacket(packet: AnyPacket, options: { trickle?: boolean } = {}) {
+    this.testReceiveBytes(this.encode(packet), options);
   }
 
   // Gives us access to the protected `bytesReceived` method.
-  receiveBytes(bytes: Uint8Array, options: { trickle?: boolean } = {}) {
+  testReceiveBytes(bytes: Uint8Array, options: { trickle?: boolean } = {}) {
     if (options.trickle) {
       for (let i = 0; i < bytes.length; i++) {
         this.bytesReceived(bytes.slice(i, i + 1));
@@ -74,7 +76,7 @@ class TestClient extends BaseClient<TestClientOptions> {
   }
 
   // Capture packets received after decoded by the client.
-  packetReceived(packet: AnyPacket) {
+  protected packetReceived(packet: AnyPacket) {
     this.receivedPackets.push(packet);
 
     // Let the base client process the packet.
@@ -87,17 +89,21 @@ class TestClient extends BaseClient<TestClientOptions> {
 
   // These methods are here to simulate timers without actually passing time:
 
-  startTimer(name: string, cb: (...args: unknown[]) => void, _delay: number) {
+  protected startTimer(
+    name: string,
+    cb: (...args: unknown[]) => void,
+    _delay: number
+  ) {
     this.timerCallbacks[name] = cb;
   }
 
-  stopTimer(_name: string) {}
+  protected stopTimer(_name: string) {}
 
-  timerExists(name: string) {
+  protected timerExists(name: string) {
     return !!this.timerCallbacks[name];
   }
 
-  triggerTimer(name: string) {
+  testTriggerTimer(name: string) {
     this.timerCallbacks[name]();
   }
 }
@@ -119,7 +125,7 @@ Deno.test('connect/disconnect', async () => {
   assertEquals(client.sentPackets[0].type, 'connect');
   assertEquals(client.connectionState, 'waiting-for-connack');
 
-  client.receivePacket({
+  client.testReceivePacket({
     type: 'connack',
     returnCode: 0,
     sessionPresent: false,
@@ -139,11 +145,7 @@ Deno.test('connect/disconnect', async () => {
 });
 
 Deno.test('open throws, connect does not reject when retries > 0', async () => {
-  const client = new TestClient();
-
-  client.open = async () => {
-    throw new Error('nope');
-  };
+  const client = new TestClient({ openRejects: 1 });
 
   let connectRejected = false;
 
@@ -179,12 +181,9 @@ Deno.test('open throws, connect does not reject when retries > 0', async () => {
 
 Deno.test('open throws, connect rejects when retries is 0', async () => {
   const client = new TestClient({
+    openRejects: 1,
     reconnect: { retries: 0 },
   });
-
-  client.open = async () => {
-    throw new Error('nope');
-  };
 
   let connectRejected = false;
 
@@ -236,7 +235,7 @@ Deno.test('waiting for connack times out', async () => {
 
   // This is when we should receive the connack packet.
   // Simulate time passing by manually triggering the connect timer.
-  client.triggerTimer('connect');
+  client.testTriggerTimer('connect');
 
   assertEquals(client.connectionState, 'offline');
 
@@ -266,7 +265,7 @@ Deno.test('client can receive one byte at a time', async () => {
   assertEquals(client.sentPackets[0].type, 'connect');
   assertEquals(client.connectionState, 'waiting-for-connack');
 
-  client.receivePacket(
+  client.testReceivePacket(
     {
       type: 'connack',
       returnCode: 0,
@@ -278,7 +277,7 @@ Deno.test('client can receive one byte at a time', async () => {
   assertEquals(client.receivedPackets[0].type, 'connack');
   assertEquals(client.connectionState, 'connected');
 
-  client.receivePacket(
+  client.testReceivePacket(
     {
       type: 'publish',
       topic: 'test',
@@ -289,18 +288,21 @@ Deno.test('client can receive one byte at a time', async () => {
 
   assertEquals(client.receivedPackets[1].type, 'publish');
 
-  const bytes = client.encode({
-    type: 'publish',
-    topic: 'test2',
-    payload: 'test2',
-  });
+  const bytes = encode(
+    {
+      type: 'publish',
+      topic: 'test2',
+      payload: 'test2',
+    },
+    utf8Encoder
+  );
 
   // Receive all but the last byte:
-  client.receiveBytes(bytes.slice(0, bytes.length - 1));
+  client.testReceiveBytes(bytes.slice(0, bytes.length - 1));
   // No new packets have been received:
   assertEquals(client.receivedPackets.length, 2);
   // Send the last byte:
-  client.receiveBytes(bytes.slice(bytes.length - 1));
+  client.testReceiveBytes(bytes.slice(bytes.length - 1));
   // A new packet has been received:
   assertEquals(client.receivedPackets.length, 3);
   assertEquals(client.receivedPackets[2].type, 'publish');
@@ -319,7 +321,7 @@ Deno.test('client can receive bytes for multiple packets at once', async () => {
   assertEquals(client.sentPackets[0].type, 'connect');
   assertEquals(client.connectionState, 'waiting-for-connack');
 
-  client.receivePacket({
+  client.testReceivePacket({
     type: 'connack',
     returnCode: 0,
     sessionPresent: false,
@@ -329,19 +331,25 @@ Deno.test('client can receive bytes for multiple packets at once', async () => {
   assertEquals(client.connectionState, 'connected');
 
   const bytes = Uint8Array.from([
-    ...client.encode({
-      type: 'publish',
-      topic: 'topic1',
-      payload: 'payload1',
-    }),
-    ...client.encode({
-      type: 'publish',
-      topic: 'topic2',
-      payload: 'payload2',
-    }),
+    ...encode(
+      {
+        type: 'publish',
+        topic: 'topic1',
+        payload: 'payload1',
+      },
+      utf8Encoder
+    ),
+    ...encode(
+      {
+        type: 'publish',
+        topic: 'topic2',
+        payload: 'payload2',
+      },
+      utf8Encoder
+    ),
   ]);
 
-  client.receiveBytes(bytes);
+  client.testReceiveBytes(bytes);
 
   assertEquals(client.receivedPackets.length, 3);
   assertEquals(client.receivedPackets[1].type, 'publish');
@@ -367,7 +375,7 @@ Deno.test('connect resolves on the first successful connection', async () => {
   assertEquals(client.connectionState, 'offline');
   assertEquals(connectResolved, false);
 
-  client.triggerTimer('reconnect');
+  client.testTriggerTimer('reconnect');
 
   assertEquals(client.connectionState, 'connecting');
   assertEquals(connectResolved, false);
@@ -378,7 +386,7 @@ Deno.test('connect resolves on the first successful connection', async () => {
   assertEquals(client.connectionState, 'waiting-for-connack');
   assertEquals(connectResolved, false);
 
-  client.receivePacket({
+  client.testReceivePacket({
     type: 'connack',
     returnCode: 0,
     sessionPresent: false,
@@ -437,7 +445,7 @@ Deno.test('reconnecting resubscribes', async () => {
   assertEquals(client.sentPackets[0].type, 'connect');
   assertEquals(client.connectionState, 'waiting-for-connack');
 
-  client.receivePacket({
+  client.testReceivePacket({
     type: 'connack',
     returnCode: 0,
     sessionPresent: false,
@@ -463,7 +471,7 @@ Deno.test('reconnecting resubscribes', async () => {
     { topic: 'topic2', qos: 0 },
   ]);
 
-  client.receivePacket({
+  client.testReceivePacket({
     type: 'suback',
     id: subscribe1.id,
     returnCodes: [0, 0],
@@ -485,7 +493,7 @@ Deno.test('reconnecting resubscribes', async () => {
   assertEquals(unsubscribe.type, 'unsubscribe');
   assertEquals(unsubscribe.topics[0], 'topic1');
 
-  client.receivePacket({
+  client.testReceivePacket({
     type: 'unsuback',
     id: unsubscribe.id,
   });
@@ -508,7 +516,7 @@ Deno.test('reconnecting resubscribes', async () => {
   assertEquals(subscribe2.type, 'subscribe');
   assertEquals(subscribe2.subscriptions, [{ topic: 'topic2', qos: 0 }]);
 
-  client.receivePacket({
+  client.testReceivePacket({
     type: 'suback',
     id: subscribe2.id,
     returnCodes: [0],
@@ -523,7 +531,7 @@ Deno.test('reconnecting resubscribes', async () => {
 
   assertEquals(client.connectionState, 'offline');
 
-  client.triggerTimer('reconnect');
+  client.testTriggerTimer('reconnect');
 
   assertEquals(client.connectionState, 'connecting');
 
@@ -533,7 +541,7 @@ Deno.test('reconnecting resubscribes', async () => {
   assertEquals(client.sentPackets[4].type, 'connect');
   assertEquals(client.connectionState, 'waiting-for-connack');
 
-  client.receivePacket({
+  client.testReceivePacket({
     type: 'connack',
     returnCode: 0,
     sessionPresent: false,
