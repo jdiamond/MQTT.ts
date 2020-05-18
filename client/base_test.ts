@@ -1,116 +1,13 @@
 import { assertEquals } from 'https://deno.land/std@0.50.0/testing/asserts.ts';
-import { BaseClient, BaseClientOptions } from './base.ts';
 import {
-  AnyPacket,
   PublishPacket,
   SubscribePacket,
   UnsubscribePacket,
   encode,
-  decode,
 } from '../packets/mod.ts';
-
-type TestClientOptions = BaseClientOptions & {
-  openRejects?: number;
-};
+import { TestClient } from './test.ts';
 
 const utf8Encoder = new TextEncoder();
-const utf8Decoder = new TextDecoder();
-
-class TestClient extends BaseClient<TestClientOptions> {
-  sentPackets: AnyPacket[] = [];
-  receivedPackets: AnyPacket[] = [];
-  timerCallbacks: { [key: string]: Function } = {};
-  openCalls: number = 0;
-
-  constructor(options: TestClientOptions = {}) {
-    super({
-      ...options,
-      // logger: console.log,
-    });
-  }
-
-  // These methods must be overridden by BaseClient subclasses:
-
-  protected async open() {
-    this.openCalls++;
-
-    if (
-      this.options.openRejects &&
-      this.openCalls <= this.options.openRejects
-    ) {
-      throw new Error('nope');
-    }
-  }
-
-  protected async write(bytes: Uint8Array) {
-    const packet = this.decode(bytes);
-    this.sentPackets.push(packet!);
-  }
-
-  protected async close() {
-    this.connectionClosed();
-  }
-
-  protected encode(packet: AnyPacket) {
-    return super.encode(packet, utf8Encoder);
-  }
-
-  protected decode(bytes: Uint8Array) {
-    return super.decode(bytes, utf8Decoder);
-  }
-
-  // Helper method to simulate receiving bytes for a packet from the server.
-  testReceivePacket(packet: AnyPacket, options: { trickle?: boolean } = {}) {
-    this.testReceiveBytes(this.encode(packet), options);
-  }
-
-  // Gives us access to the protected `bytesReceived` method.
-  testReceiveBytes(bytes: Uint8Array, options: { trickle?: boolean } = {}) {
-    if (options.trickle) {
-      for (let i = 0; i < bytes.length; i++) {
-        this.bytesReceived(bytes.slice(i, i + 1));
-      }
-    } else {
-      this.bytesReceived(bytes);
-    }
-  }
-
-  // Capture packets received after decoded by the client.
-  protected packetReceived(packet: AnyPacket) {
-    this.receivedPackets.push(packet);
-
-    // Let the base client process the packet.
-    super.packetReceived(packet);
-  }
-
-  testCloseConnection() {
-    this.connectionClosed();
-  }
-
-  // These methods are here to simulate timers without actually passing time:
-
-  protected startTimer(
-    name: string,
-    cb: (...args: unknown[]) => void,
-    _delay: number
-  ) {
-    this.timerCallbacks[name] = cb;
-  }
-
-  protected stopTimer(_name: string) {}
-
-  protected timerExists(name: string) {
-    return !!this.timerCallbacks[name];
-  }
-
-  testTriggerTimer(name: string) {
-    this.timerCallbacks[name]();
-  }
-}
-
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(() => resolve(), ms));
-}
 
 Deno.test('connect/disconnect', async () => {
   const client = new TestClient();
@@ -120,7 +17,7 @@ Deno.test('connect/disconnect', async () => {
   assertEquals(client.connectionState, 'connecting');
 
   // Sleep a little to allow the connect packet to be sent.
-  await sleep(1);
+  await client.sleep(1);
 
   assertEquals(client.sentPackets[0].type, 'connect');
   assertEquals(client.connectionState, 'waiting-for-connack');
@@ -138,7 +35,7 @@ Deno.test('connect/disconnect', async () => {
   assertEquals(client.connectionState, 'disconnecting');
 
   // Sleep a little to allow the disconnect packet to be sent.
-  await sleep(1);
+  await client.sleep(1);
 
   assertEquals(client.sentPackets[1].type, 'disconnect');
   assertEquals(client.connectionState, 'disconnected');
@@ -156,7 +53,7 @@ Deno.test('open throws, connect does not reject when retries > 0', async () => {
   assertEquals(client.connectionState, 'connecting');
 
   // Sleep a little to allow open to throw.
-  await sleep(1);
+  await client.sleep(1);
 
   assertEquals(client.connectionState, 'offline');
 
@@ -173,7 +70,7 @@ Deno.test('open throws, connect does not reject when retries > 0', async () => {
   assertEquals(client.connectionState, 'disconnected');
 
   // Sleep long enough for the disconnect packet to have been written.
-  await sleep(1);
+  await client.sleep(1);
 
   // But no disconnect packet should have been written.
   assertEquals(client.sentPackets.length, 0);
@@ -194,7 +91,7 @@ Deno.test('open throws, connect rejects when retries is 0', async () => {
   assertEquals(client.connectionState, 'connecting');
 
   // Sleep a little to allow open to throw.
-  await sleep(1);
+  await client.sleep(1);
 
   assertEquals(client.connectionState, 'offline');
 
@@ -211,7 +108,7 @@ Deno.test('open throws, connect rejects when retries is 0', async () => {
   assertEquals(client.connectionState, 'disconnected');
 
   // Sleep long enough for the disconnect packet to have been written.
-  await sleep(1);
+  await client.sleep(1);
 
   // But no disconnect packet should have been written.
   assertEquals(client.sentPackets.length, 0);
@@ -225,7 +122,7 @@ Deno.test('waiting for connack times out', async () => {
   assertEquals(client.connectionState, 'connecting');
 
   // Sleep a little to allow the connect packet to be sent.
-  await sleep(1);
+  await client.sleep(1);
 
   // Now we see the connect packet was written.
   assertEquals(client.sentPackets[0].type, 'connect');
@@ -246,7 +143,7 @@ Deno.test('waiting for connack times out', async () => {
   assertEquals(client.connectionState, 'disconnected');
 
   // Sleep long enough for the disconnect packet to have been written.
-  await sleep(1);
+  await client.sleep(1);
 
   // But no disconnect packet should have been written.
   assertEquals(client.sentPackets.length, 1);
@@ -260,7 +157,7 @@ Deno.test('client can receive one byte at a time', async () => {
   assertEquals(client.connectionState, 'connecting');
 
   // Sleep a little to allow the connect packet to be sent.
-  await sleep(1);
+  await client.sleep(1);
 
   assertEquals(client.sentPackets[0].type, 'connect');
   assertEquals(client.connectionState, 'waiting-for-connack');
@@ -316,7 +213,7 @@ Deno.test('client can receive bytes for multiple packets at once', async () => {
   assertEquals(client.connectionState, 'connecting');
 
   // Sleep a little to allow the connect packet to be sent.
-  await sleep(1);
+  await client.sleep(1);
 
   assertEquals(client.sentPackets[0].type, 'connect');
   assertEquals(client.connectionState, 'waiting-for-connack');
@@ -370,7 +267,7 @@ Deno.test('connect resolves on the first successful connection', async () => {
   assertEquals(client.connectionState, 'connecting');
 
   // Sleep a little to allow open to reject.
-  await sleep(1);
+  await client.sleep(1);
 
   assertEquals(client.connectionState, 'offline');
   assertEquals(connectResolved, false);
@@ -381,7 +278,7 @@ Deno.test('connect resolves on the first successful connection', async () => {
   assertEquals(connectResolved, false);
 
   // Sleep a little to allow the connect packet to be sent.
-  await sleep(1);
+  await client.sleep(1);
 
   assertEquals(client.connectionState, 'waiting-for-connack');
   assertEquals(connectResolved, false);
@@ -396,7 +293,7 @@ Deno.test('connect resolves on the first successful connection', async () => {
   assertEquals(connectResolved, false);
 
   // Sleep a little to allow the connect promise to resolve.
-  await sleep(1);
+  await client.sleep(1);
 
   assertEquals(client.connectionState, 'connected');
   assertEquals(connectResolved, true);
@@ -425,7 +322,7 @@ Deno.test('connect rejects when retries is 0', async () => {
   assertEquals(client.connectionState, 'connecting');
 
   // Sleep a little to allow open to reject.
-  await sleep(1);
+  await client.sleep(1);
 
   assertEquals(client.connectionState, 'offline');
   assertEquals(connectResolved, false);
@@ -440,7 +337,7 @@ Deno.test('reconnecting resubscribes', async () => {
   assertEquals(client.connectionState, 'connecting');
 
   // Sleep a little to allow the connect packet to be sent.
-  await sleep(1);
+  await client.sleep(1);
 
   assertEquals(client.sentPackets[0].type, 'connect');
   assertEquals(client.connectionState, 'waiting-for-connack');
@@ -461,7 +358,7 @@ Deno.test('reconnecting resubscribes', async () => {
   ]);
 
   // Sleep a little to allow the subscribe packet to be sent.
-  await sleep(1);
+  await client.sleep(1);
 
   const subscribe1 = client.sentPackets[1] as SubscribePacket;
 
@@ -486,7 +383,7 @@ Deno.test('reconnecting resubscribes', async () => {
   assertEquals(client.subscriptions, [{ topic: 'topic2', qos: 0 }]);
 
   // Sleep a little to allow the unsubscribe packet to be sent.
-  await sleep(1);
+  await client.sleep(1);
 
   const unsubscribe = client.sentPackets[2] as UnsubscribePacket;
 
@@ -509,7 +406,7 @@ Deno.test('reconnecting resubscribes', async () => {
   assertEquals(client.subscriptions, [{ topic: 'topic2', qos: 0 }]);
 
   // Sleep a little to allow the subscribe packet to be sent.
-  await sleep(1);
+  await client.sleep(1);
 
   const subscribe2 = client.sentPackets[3] as SubscribePacket;
 
@@ -536,7 +433,7 @@ Deno.test('reconnecting resubscribes', async () => {
   assertEquals(client.connectionState, 'connecting');
 
   // Sleep a little to allow the connect packet to be sent.
-  await sleep(1);
+  await client.sleep(1);
 
   assertEquals(client.sentPackets[4].type, 'connect');
   assertEquals(client.connectionState, 'waiting-for-connack');
@@ -550,7 +447,7 @@ Deno.test('reconnecting resubscribes', async () => {
   assertEquals(client.connectionState, 'connected');
 
   // Sleep a little to allow the subscribe packet to be sent.
-  await sleep(1);
+  await client.sleep(1);
 
   assertEquals(client.sentPackets[5].type, 'subscribe');
   assertEquals((client.sentPackets[5] as SubscribePacket).subscriptions, [
