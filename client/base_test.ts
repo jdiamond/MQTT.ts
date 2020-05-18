@@ -369,7 +369,7 @@ Deno.test('connect resolves on the first successful connection', async () => {
 
   client.triggerTimer('reconnect');
 
-  assertEquals(client.connectionState, 'reconnecting');
+  assertEquals(client.connectionState, 'connecting');
   assertEquals(connectResolved, false);
 
   // Sleep a little to allow the connect packet to be sent.
@@ -525,7 +525,7 @@ Deno.test('reconnecting resubscribes', async () => {
 
   client.triggerTimer('reconnect');
 
-  assertEquals(client.connectionState, 'reconnecting');
+  assertEquals(client.connectionState, 'connecting');
 
   // Sleep a little to allow the connect packet to be sent.
   await sleep(1);

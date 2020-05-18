@@ -59,7 +59,6 @@ type ConnectionStates =
   | 'waiting-for-connack'
   | 'connected'
   | 'offline'
-  | 'reconnecting'
   | 'disconnecting'
   | 'disconnected';
 
@@ -128,7 +127,7 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
 
   // Public methods
 
-  public async connect(): Promise<ConnackPacket | null> {
+  public async connect(): Promise<ConnackPacket> {
     switch (this.connectionState) {
       case 'never-connected':
       case 'offline':
@@ -140,44 +139,13 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
         );
     }
 
-    this.changeState('connecting');
-
     const deferred = new Deferred<ConnackPacket, void>();
 
     this.unacknowledgedConnect = deferred;
 
-    try {
-      await this.open();
-
-      await this.connectionOpened();
-    } catch (err) {
-      this.connectionFailed();
-    }
+    this.openConnection();
 
     return deferred.promise;
-  }
-
-  // Same thing as connect but resolves immediately instead of when the
-  // connection is fully established (when CONNACK is received).
-  private async reconnect() {
-    switch (this.connectionState) {
-      case 'offline':
-        break;
-      default:
-        throw new Error(
-          `should not be connecting in ${this.connectionState} state`
-        );
-    }
-
-    this.changeState('reconnecting');
-
-    try {
-      await this.open();
-
-      await this.connectionOpened();
-    } catch (err) {
-      this.connectionFailed();
-    }
   }
 
   public async publish(
@@ -308,7 +276,7 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
     return deferred.promise;
   }
 
-  public async disconnect() {
+  public async disconnect(): Promise<void> {
     // TODO: allow to be called when not connected so users can connect,
     // publish, disconnect without waiting for connack.
     switch (this.connectionState) {
@@ -348,50 +316,31 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
     return decode(bytes, utf8Decoder);
   }
 
-  // Methods that can be overridden by subclasses
+  // This gets called from connect and when reconnecting.
+  protected async openConnection() {
+    try {
+      this.changeState('connecting');
 
-  // This gets called after open succeeds.
-  protected async connectionOpened() {
-    this.log('connectionOpened');
+      await this.open();
 
-    await this.send({
-      type: 'connect',
-      clientId: this.clientId,
-      username: this.options.username,
-      password: this.options.password,
-      clean: this.options.clean !== false,
-      keepAlive: this.keepAlive,
-    });
+      await this.send({
+        type: 'connect',
+        clientId: this.clientId,
+        username: this.options.username,
+        password: this.options.password,
+        clean: this.options.clean !== false,
+        keepAlive: this.keepAlive,
+      });
 
-    this.changeState('waiting-for-connack');
+      this.changeState('waiting-for-connack');
 
-    this.startConnectTimer();
-  }
+      this.startConnectTimer();
+    } catch (err) {
+      this.changeState('offline');
 
-  // This gets called if open or connectionOpened throws.
-  protected connectionFailed() {
-    this.log('connectionFailed');
-
-    switch (this.connectionState) {
-      case 'connecting':
-      case 'reconnecting':
-        break;
-      default:
-        throw new Error(
-          `connecting should not have failed in ${this.connectionState} state`
-        );
-    }
-
-    this.changeState('offline');
-
-    if (this.connectionState === 'connecting') {
-      this.reconnectAttempt = 0;
-    } else {
-      this.reconnectAttempt++;
-    }
-
-    if (!this.startReconnectTimer()) {
-      this.notifyConnectRejected(new Error('connection failed'));
+      if (!this.startReconnectTimer()) {
+        this.notifyConnectRejected(new Error('connection failed'));
+      }
     }
   }
 
@@ -691,7 +640,8 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
     this.startTimer(
       'reconnect',
       () => {
-        this.reconnect();
+        this.reconnectAttempt++;
+        this.openConnection();
       },
       delay
     );
