@@ -1,6 +1,6 @@
 {
   "name": "@jdiamond/mqtt",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "MQTT in TypeScript for Deno, Node.js, and browsers",
   "license": "MIT",
   "homepage": "https://github.com/jdiamond/MQTT.ts",
@@ -32,6 +32,7 @@
   "files": [
     "browser.min.js",
     "browser.min.mjs",
+    "node.d.ts",
     "node.js",
     "node.mjs"
   ],

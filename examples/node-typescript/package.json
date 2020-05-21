@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "dependencies": {
-    "@jdiamond/mqtt": "file:../../build"
+    "@jdiamond/mqtt": "0.0.4"
   },
   "devDependencies": {
     "@types/node": "^14.0.5",
