@@ -1,6 +1,6 @@
 {
   "name": "@jdiamond/mqtt",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "MQTT in TypeScript for Deno, Node.js, and browsers",
   "license": "MIT",
   "homepage": "https://github.com/jdiamond/MQTT.ts",
@@ -27,6 +27,7 @@
       "default": "./node.js"
     }
   },
+  "types": "./node.d.ts",
   "unpkg": "./browser.min.mjs",
   "files": [
     "browser.min.js",
@@ -39,11 +40,13 @@
     "@babel/cli": "^7.8.4",
     "@babel/core": "^7.9.6",
     "@babel/preset-env": "^7.9.6",
-    "terser": "^4.6.13"
+    "@types/node": "^14.0.4",
+    "terser": "^4.6.13",
+    "typescript": "^3.9.3"
   },
   "scripts": {
     "prepack": "npm run build",
-    "build": "npm run build:browser && npm run build:node",
+    "build": "npm run build:browser && npm run build:node && ./build-node-types.sh",
     "build:browser": "npm run build:browser:bundle && npm run build:browser:esm && npm run build:browser:esm:min && npm run build:browser:umd && npm run build:browser:umd:min",
     "build:browser:bundle": "deno bundle ../browser.ts browser.bundle.js",
     "build:browser:esm": "babel --config-file ./browser-esm.json browser.bundle.js > browser.mjs",

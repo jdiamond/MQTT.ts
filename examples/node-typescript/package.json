@@ -1,0 +1,13 @@
+{
+  "name": "@jdiamond/mqtt-node-typescript",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "@jdiamond/mqtt": "file:../../build"
+  },
+  "devDependencies": {
+    "@types/node": "^14.0.5",
+    "ts-node": "^8.10.1",
+    "typescript": "^3.9.3"
+  }
+}

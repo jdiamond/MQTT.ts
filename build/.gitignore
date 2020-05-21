@@ -12,3 +12,6 @@
 /node.bundle.js
 /node.mjs
 /node.js
+/node.d.ts
+
+/src

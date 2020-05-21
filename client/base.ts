@@ -95,7 +95,7 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
   eventListeners: Map<string, Function[]> = new Map();
 
   private timers: {
-    [key: string]: number | undefined;
+    [key: string]: any | undefined;
   } = {};
 
   log: (msg: string, ...args: unknown[]) => void;
