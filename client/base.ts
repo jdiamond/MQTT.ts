@@ -100,6 +100,7 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
   keepAlive: number;
   connectionState: ConnectionStates = 'offline';
   everConnected: boolean = false;
+  disconnectRequested: boolean = false;
   reconnectAttempt: number = 0;
   subscriptions: Subscription[] = [];
 
@@ -107,6 +108,8 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
   private lastPacketTime: Date | undefined;
 
   private buffer: Uint8Array | null = null;
+
+  queuedPackets: AnyPacket[] = [];
 
   unacknowledgedConnect?: Deferred<ConnackPacket, void>;
 
@@ -154,6 +157,8 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
         );
     }
 
+    this.disconnectRequested = false;
+
     const deferred = new Deferred<ConnackPacket, void>();
 
     this.unacknowledgedConnect = deferred;
@@ -168,16 +173,6 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
     payload: any,
     options?: PublishOptions
   ): Promise<PubackPacket | void> {
-    switch (this.connectionState) {
-      case 'connected':
-        break;
-      default:
-        // TODO: queue publishes while not connected
-        throw new Error(
-          `should not be publishing in ${this.connectionState} state`
-        );
-    }
-
     const dup = (options && options.dup) || false;
     const qos = (options && options.qos) || 0;
     const retain = (options && options.retain) || false;
@@ -203,7 +198,7 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
       result = deferred.promise;
     }
 
-    await this.send(packet);
+    await this.queue(packet);
 
     return result;
   }
@@ -292,14 +287,13 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
   }
 
   public async disconnect(): Promise<void> {
-    // TODO: allow to be called when not connected so users can connect,
-    // publish, disconnect without waiting for connack.
     switch (this.connectionState) {
       case 'connected':
-        this.changeState('disconnecting');
-        this.stopTimers();
-        await this.send({ type: 'disconnect' });
-        await this.close();
+        await this.doDisconnect();
+        break;
+      case 'connecting':
+      case 'waiting-for-connack':
+        this.disconnectRequested = true;
         break;
       case 'offline':
         this.changeState('disconnected');
@@ -310,6 +304,13 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
           `should not be disconnecting in ${this.connectionState} state`
         );
     }
+  }
+
+  private async doDisconnect() {
+    this.changeState('disconnecting');
+    this.stopTimers();
+    await this.send({ type: 'disconnect' });
+    await this.close();
   }
 
   // Connection methods implemented by subclasses
@@ -486,9 +487,10 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
       this.unacknowledgedConnect.resolve(packet);
     }
 
-    // TODO: flush publishes queued while not connected
-    // TODO: resend unacknowledged publish and pubcomp packets
     this.sendSubscriptions();
+    // TODO: resend unacknowledged publish and pubcomp packets
+    // TODO: flush publishes queued while not connected
+    this.flushQueuedPackets();
     this.stopConnectTimer();
     this.startKeepAliveTimer();
   }
@@ -868,6 +870,28 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
     }
 
     return this.lastPacketId;
+  }
+
+  protected async queue(packet: AnyPacket) {
+    if (this.connectionState !== 'connected') {
+      this.log(`queueing ${packet.type} packet`);
+
+      this.queuedPackets.push(packet);
+    } else {
+      return this.send(packet);
+    }
+  }
+
+  protected async flushQueuedPackets() {
+    for (const packet of this.queuedPackets) {
+      await this.send(packet);
+    }
+
+    this.queuedPackets = [];
+
+    if (this.disconnectRequested) {
+      await this.doDisconnect();
+    }
   }
 
   protected async send(packet: AnyPacket) {
