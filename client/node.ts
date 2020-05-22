@@ -22,10 +22,6 @@ declare class Buffer {
 
 const net = require('net');
 
-const defaultPorts: { [protocol: string]: number } = {
-  mqtt: 1883,
-};
-
 const utf8Encoder = {
   encode(str: string) {
     return Buffer.from(str, 'utf8');
@@ -42,18 +38,22 @@ export class Client extends BaseClient<ClientOptions> {
   private socket: Socket | null = null;
   private socketState: undefined | 'connecting' | 'connected' | 'failed';
 
-  constructor(options: ClientOptions = {}) {
+  constructor(options?: ClientOptions) {
     super(options);
   }
 
-  protected async open() {
-    const url = this.parseURL(
-      this.options.url || 'mqtt://localhost',
-      defaultPorts
-    );
+  protected getDefaultURL() {
+    return 'mqtt://localhost';
+  }
 
-    this.log(`opening connection to ${url}`);
+  protected validateURL(url: URL) {
+    // TODO: add mqtts
+    if (url.protocol !== 'mqtt:') {
+      throw new Error(`URL protocol must be mqtt`);
+    }
+  }
 
+  protected async open(url: URL) {
     this.socketState = 'connecting';
 
     return new Promise<void>((resolve, reject) => {

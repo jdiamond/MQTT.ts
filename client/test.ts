@@ -21,6 +21,12 @@ export class TestClient extends BaseClient<TestClientOptions> {
   }
 
   // These methods must be overridden by BaseClient subclasses:
+  protected getDefaultURL() {
+    return 'mqtt://localhost';
+  }
+
+  protected validateURL() {}
+
   protected async open() {
     this.openCalls++;
     if (

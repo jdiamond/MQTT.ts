@@ -14,28 +14,27 @@ declare class WebSocket {
   close(): void;
 }
 
-const defaultPorts: { [protocol: string]: number } = {
-  ws: 80,
-};
-
 const utf8Encoder = new TextEncoder();
 const utf8Decoder = new TextDecoder();
 
 export class Client extends BaseClient<ClientOptions> {
   private ws: WebSocket | undefined;
 
-  constructor(options: ClientOptions = {}) {
+  constructor(options?: ClientOptions) {
     super(options);
   }
 
-  protected async open() {
-    const url = this.parseURL(
-      this.options.url || 'ws://localhost',
-      defaultPorts
-    );
+  protected getDefaultURL() {
+    return 'ws://localhost';
+  }
 
-    this.log(`opening connection to ${url}`);
+  protected validateURL(url: URL) {
+    if (!(url.protocol === 'ws:' || url.protocol === 'wss:')) {
+      throw new Error(`URL protocol must be ws or wss`);
+    }
+  }
 
+  protected async open(url: URL) {
     let closed = true;
 
     return new Promise<void>((resolve, reject) => {

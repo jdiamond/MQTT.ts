@@ -17,9 +17,13 @@ import {
 } from '../packets/mod.ts';
 import { UTF8Encoder, UTF8Decoder } from '../packets/utf8.ts';
 
+type URLFactory = URL | string | (() => URL | string | void);
+type ClientIdFactory = string | (() => string);
+
 export type BaseClientOptions = {
-  url?: string;
-  clientId?: string | Function;
+  url?: URLFactory;
+  clientId?: ClientIdFactory;
+  clientIdPrefix?: string;
   clean?: boolean;
   keepAlive?: number;
   username?: string;
@@ -64,8 +68,27 @@ type ConnectionStates =
 
 const packetIdLimit = 2 ** 16;
 
+const defaultPorts: { [protocol: string]: number } = {
+  mqtt: 1883,
+  mqtts: 8883,
+  ws: 80,
+  wss: 443,
+};
+
+const defaultClientIdPrefix = 'mqttts';
+const defaultKeepAlive = 60;
+const defaultConnectTimeout = 10 * 1000;
+const defaultReconnectOptions = {
+  retries: Infinity,
+  minDelay: 1000,
+  maxDelay: 60000,
+  factor: 1.1,
+  random: true,
+};
+
 export abstract class BaseClient<OptionsType extends BaseClientOptions> {
   options: OptionsType;
+  url?: URL;
   clientId: string;
   keepAlive: number;
   connectionState: ConnectionStates;
@@ -100,25 +123,13 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
 
   log: (msg: string, ...args: unknown[]) => void;
 
-  // TODO: combine these into one defaults property?
-  defaultClientIdPrefix: string = 'mqttts';
-  defaultConnectTimeout: number = 10 * 1000;
-  defaultKeepAlive: number = 60;
-  defaultReconnectOptions = {
-    retries: Infinity,
-    minDelay: 1000,
-    maxDelay: 60000,
-    factor: 1.1,
-    random: true,
-  };
-
-  public constructor(options: OptionsType) {
-    this.options = options;
+  public constructor(options?: OptionsType) {
+    this.options = options || <OptionsType>{};
     this.clientId = this.generateClientId();
     this.keepAlive =
       typeof this.options.keepAlive === 'number'
         ? this.options.keepAlive
-        : this.defaultKeepAlive;
+        : defaultKeepAlive;
     this.connectionState = 'never-connected';
     this.reconnectAttempt = 0;
     this.lastPacketId = 0;
@@ -299,7 +310,11 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
 
   // Connection methods implemented by subclasses
 
-  protected abstract async open(): Promise<void>;
+  protected abstract getDefaultURL(): URL | string;
+
+  protected abstract validateURL(url: URL): void;
+
+  protected abstract async open(url: URL): Promise<void>;
 
   protected abstract async write(bytes: Uint8Array): Promise<void>;
 
@@ -321,7 +336,11 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
     try {
       this.changeState('connecting');
 
-      await this.open();
+      this.url = this.getURL();
+
+      this.log(`opening connection to ${this.url}`);
+
+      await this.open(this.url);
 
       await this.send({
         type: 'connect',
@@ -557,7 +576,7 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
       () => {
         this.connectTimedOut();
       },
-      this.options.connectTimeout || this.defaultConnectTimeout
+      this.options.connectTimeout || defaultConnectTimeout
     );
   }
 
@@ -605,7 +624,6 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
 
     const reconnectOptions =
       typeof options.reconnect === 'object' ? options.reconnect : {};
-    const defaultReconnectOptions = this.defaultReconnectOptions;
 
     const attempt = this.reconnectAttempt;
     const maxAttempts =
@@ -775,10 +793,8 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
       clientId = this.options.clientId;
     } else if (typeof this.options.clientId === 'function') {
       clientId = this.options.clientId();
-    }
-
-    if (!clientId) {
-      const prefix = this.defaultClientIdPrefix;
+    } else {
+      const prefix = this.options.clientIdPrefix || defaultClientIdPrefix;
       const suffix = Math.random().toString(36).slice(2);
 
       clientId = `${prefix}-${suffix}`;
@@ -787,29 +803,42 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
     return clientId;
   }
 
-  protected parseURL(
-    url: string,
-    defaultPorts: { [protocol: string]: number }
-  ) {
-    let parsed = new URL(url);
+  private getURL(): URL {
+    let url: URL | string | void =
+      typeof this.options.url === 'function'
+        ? this.options.url()
+        : this.options.url;
 
-    const protocol = parsed.protocol.slice(0, -1);
-
-    if (!defaultPorts[protocol]) {
-      throw new Error(`unsupported protocol: ${protocol}`);
+    if (!url) {
+      url = this.getDefaultURL();
     }
+
+    if (typeof url === 'string') {
+      url = this.parseURL(url);
+    }
+
+    const protocol = url.protocol.slice(0, -1);
+
+    if (!url.port) {
+      url.port = defaultPorts[protocol].toString();
+    }
+
+    this.validateURL(url);
+
+    return url;
+  }
+
+  protected parseURL(url: string) {
+    let parsed = new URL(url);
 
     // When Deno and browsers parse "mqtt:" URLs, they return "//host:port/path"
     // in the `pathname` property and leave `host`, `hostname`, and `port`
     // blank. This works around that by re-parsing as an "http:" URL and then
     // changing the protocol back to "mqtt:". Node.js doesn't behave like this.
     if (!parsed.hostname && parsed.pathname.startsWith('//')) {
-      parsed = new URL(url.replace(`${protocol}:`, 'http:'));
-      parsed.protocol = `${protocol}:`;
-    }
-
-    if (!parsed.port) {
-      parsed.port = defaultPorts[protocol].toString();
+      const protocol = parsed.protocol;
+      parsed = new URL(url.replace(protocol, 'http:'));
+      parsed.protocol = protocol;
     }
 
     return parsed;
