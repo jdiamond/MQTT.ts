@@ -6,6 +6,31 @@ It is _not_ a port of the excellent [MQTT.js](https://github.com/mqttjs/MQTT.js)
 
 Since the core of the library has no dependencies, it wasn't too difficult to add support for Node.js and browsers so why not?
 
+## Quick Start
+
+```
+import { Client } from 'https://denopkg.com/jdiamond/MQTT.ts/mod.ts'; // Deno
+// const { Client } = require('@jdiamond/mqtt'); // Node.js
+// import { Client } from 'https://unpkg.com/@jdiamond/mqtt'; // Browsers
+
+const client = new Client({ url: 'mqtt://test.mosquitto.org' }); // Deno and Node.js
+// const client = new Client({ url: 'ws://test.mosquitto.org:8081' }); // Browsers
+
+await client.connect();
+
+await client.subscribe('incoming/#');
+
+client.on('message', (topic, payload) => {
+  console.log(topic, payload);
+});
+
+await client.publish('my/topic', 'my payload');
+
+await client.disconnect();
+```
+
+See the [API documentation](docs/api.md) for more details.
+
 ## Deno
 
 The "raw" TypeScript files are import'able by Deno.
@@ -62,9 +87,8 @@ Protocol Links:
 
 ## TODO
 
-- quick start examples
-- api docs
-- also support 3.1 and 5.0
+- finish api docs
+- also support protocol versions 3.1 and 5.0
 - async iterators for messages matching topic patterns
 - address all TODO comments in code
 - types for node.js and browser builds
