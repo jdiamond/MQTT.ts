@@ -68,10 +68,10 @@ Deno.test('open throws, connect does not reject when retries > 0', async () => {
   assertEquals(client.sentPackets.length, 0);
 });
 
-Deno.test('open throws, connect rejects when retries is 0', async () => {
+Deno.test('open throws, connect rejects when connect.retries is 0', async () => {
   const client = new TestClient({
     openRejects: 1,
-    reconnect: { retries: 0 },
+    connect: { retries: 0 },
   });
 
   let connectRejected = false;
@@ -141,9 +141,9 @@ Deno.test('waiting for connack times out', async () => {
   assertEquals(client.sentPackets.length, 1);
 });
 
-Deno.test('connect rejects when retries is 0', async () => {
+Deno.test('connect rejects when connect.retries is 0', async () => {
   const client = new TestClient({
-    reconnect: {
+    connect: {
       retries: 0,
     },
     openRejects: 1,

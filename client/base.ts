@@ -29,11 +29,12 @@ export type BaseClientOptions = {
   username?: string;
   password?: string;
   connectTimeout?: number;
-  reconnect?: boolean | ReconnectOptions;
+  connect?: boolean | RetryOptions;
+  reconnect?: boolean | RetryOptions;
   logger?: (msg: string, ...args: unknown[]) => void;
 };
 
-export type ReconnectOptions = {
+export type RetryOptions = {
   retries?: number;
   minDelay?: number;
   maxDelay?: number;
@@ -58,11 +59,10 @@ export type Subscription = {
 };
 
 type ConnectionStates =
-  | 'never-connected'
+  | 'offline'
   | 'connecting'
   | 'waiting-for-connack'
   | 'connected'
-  | 'offline'
   | 'disconnecting'
   | 'disconnected';
 
@@ -78,6 +78,13 @@ const defaultPorts: { [protocol: string]: number } = {
 const defaultClientIdPrefix = 'mqttts';
 const defaultKeepAlive = 60;
 const defaultConnectTimeout = 10 * 1000;
+const defaultConnectOptions = {
+  retries: Infinity,
+  minDelay: 1000,
+  maxDelay: 2000,
+  factor: 1.1,
+  random: false,
+};
 const defaultReconnectOptions = {
   retries: Infinity,
   minDelay: 1000,
@@ -91,11 +98,12 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
   url?: URL;
   clientId: string;
   keepAlive: number;
-  connectionState: ConnectionStates;
-  reconnectAttempt: number;
+  connectionState: ConnectionStates = 'offline';
+  everConnected: boolean = false;
+  reconnectAttempt: number = 0;
   subscriptions: Subscription[] = [];
 
-  private lastPacketId: number;
+  private lastPacketId: number = 0;
   private lastPacketTime: Date | undefined;
 
   private buffer: Uint8Array | null = null;
@@ -130,9 +138,6 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
       typeof this.options.keepAlive === 'number'
         ? this.options.keepAlive
         : defaultKeepAlive;
-    this.connectionState = 'never-connected';
-    this.reconnectAttempt = 0;
-    this.lastPacketId = 0;
     this.log = this.options.logger || (() => {});
   }
 
@@ -140,7 +145,6 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
 
   public async connect(): Promise<ConnackPacket> {
     switch (this.connectionState) {
-      case 'never-connected':
       case 'offline':
       case 'disconnected':
         break;
@@ -474,6 +478,8 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
 
     this.changeState('connected');
 
+    this.everConnected = true;
+
     if (this.unacknowledgedConnect) {
       this.log('resolving initial connect');
 
@@ -618,16 +624,25 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
   protected startReconnectTimer() {
     const options = this.options;
 
-    if (options.reconnect === false) {
-      return;
+    let reconnectOptions;
+    let defaultOptions;
+
+    if (!this.everConnected) {
+      reconnectOptions = options.connect || {};
+      defaultOptions = defaultConnectOptions;
+    } else {
+      reconnectOptions = options.reconnect || {};
+      defaultOptions = defaultReconnectOptions;
     }
 
-    const reconnectOptions =
-      typeof options.reconnect === 'object' ? options.reconnect : {};
+    if (reconnectOptions === false) {
+      return;
+    } else if (reconnectOptions === true) {
+      reconnectOptions = {};
+    }
 
     const attempt = this.reconnectAttempt;
-    const maxAttempts =
-      reconnectOptions.retries ?? defaultReconnectOptions.retries;
+    const maxAttempts = reconnectOptions.retries ?? defaultOptions.retries;
 
     if (attempt >= maxAttempts) {
       return false;
@@ -637,10 +652,10 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
     // https://dthain.blogspot.com/2009/02/exponential-backoff-in-distributed.html
     // but modified the random part so that the delay will be strictly
     // increasing.
-    const min = reconnectOptions.minDelay ?? defaultReconnectOptions.minDelay;
-    const max = reconnectOptions.maxDelay ?? defaultReconnectOptions.maxDelay;
-    const factor = reconnectOptions.factor ?? defaultReconnectOptions.factor;
-    const random = reconnectOptions.random ?? defaultReconnectOptions.random;
+    const min = reconnectOptions.minDelay ?? defaultOptions.minDelay;
+    const max = reconnectOptions.maxDelay ?? defaultOptions.maxDelay;
+    const factor = reconnectOptions.factor ?? defaultOptions.factor;
+    const random = reconnectOptions.random ?? defaultOptions.random;
 
     // The old way:
     // const randomness = 1 + (random ? Math.random() : 0);
