@@ -56,6 +56,16 @@ export type SubscriptionOption = {
 export type Subscription = {
   topic: string;
   qos: QoS;
+  state:
+    | 'pending'
+    | 'removed'
+    | 'replaced'
+    | 'unacknowledged'
+    | 'acknowledged'
+    | 'unsubscribe-pending'
+    | 'unsubscribe-unacknowledged'
+    | 'unsubscribe-acknowledged';
+  returnCode?: number;
 };
 
 type ConnectionStates =
@@ -111,19 +121,28 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
 
   queuedPackets: AnyPacket[] = [];
 
-  unacknowledgedConnect?: Deferred<ConnackPacket, void>;
+  unacknowledgedConnect?: Deferred<ConnackPacket>;
 
-  private unacknowledgedPublishes = new Map<
-    number,
-    Deferred<PubackPacket, PublishPacket>
+  private unacknowledgedPublishes = new Map<number, Deferred<void>>();
+  private unresolvedSubscribes = new Map<
+    string,
+    Deferred<SubackPacket | null>
+  >();
+  private unresolvedUnsubscribes = new Map<
+    string,
+    Deferred<UnsubackPacket | null>
   >();
   private unacknowledgedSubscribes = new Map<
     number,
-    Deferred<SubackPacket, SubscribePacket>
+    {
+      subscriptions: Subscription[];
+    }
   >();
   private unacknowledgedUnsubscribes = new Map<
     number,
-    Deferred<UnsubackPacket, UnsubscribePacket>
+    {
+      subscriptions: (Subscription | undefined)[];
+    }
   >();
 
   eventListeners: Map<string, Function[]> = new Map();
@@ -159,7 +178,7 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
 
     this.disconnectRequested = false;
 
-    const deferred = new Deferred<ConnackPacket, void>();
+    const deferred = new Deferred<ConnackPacket>();
 
     this.unacknowledgedConnect = deferred;
 
@@ -172,7 +191,7 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
     topic: string,
     payload: any,
     options?: PublishOptions
-  ): Promise<PubackPacket | void> {
+  ): Promise<void> {
     const dup = (options && options.dup) || false;
     const qos = (options && options.qos) || 0;
     const retain = (options && options.retain) || false;
@@ -191,7 +210,7 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
     let result = undefined;
 
     if (qos > 0) {
-      const deferred = new Deferred<PubackPacket, PublishPacket>(packet);
+      const deferred = new Deferred<void>();
 
       this.unacknowledgedPublishes.set(id, deferred);
 
@@ -206,11 +225,10 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
   public async subscribe(
     topic: SubscriptionOption | string | (SubscriptionOption | string)[],
     qos?: QoS
-  ): Promise<SubackPacket> {
+  ): Promise<Subscription[]> {
     switch (this.connectionState) {
-      case 'connected':
-        break;
-      default:
+      case 'disconnecting':
+      case 'disconnected':
         throw new Error(
           `should not be subscribing in ${this.connectionState} state`
         );
@@ -218,11 +236,13 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
 
     const arr = Array.isArray(topic) ? topic : [topic];
 
-    const subs = arr.map((sub) => {
+    const subs = arr.map<Subscription>((sub) => {
       return typeof sub === 'object'
-        ? { topic: sub.topic, qos: sub.qos || qos || <QoS>0 }
-        : { topic: sub, qos: qos || <QoS>0 };
+        ? { topic: sub.topic, qos: sub.qos || qos || 0, state: 'pending' }
+        : { topic: sub, qos: qos || 0, state: 'pending' };
     });
+
+    const promises = [];
 
     for (const sub of subs) {
       // Replace any matching subscription so we don't resubscribe to it
@@ -234,56 +254,109 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
       );
 
       this.subscriptions.push(sub);
+
+      const deferred = new Deferred<SubackPacket | null>();
+
+      this.unresolvedSubscribes.set(sub.topic, deferred);
+
+      promises.push(deferred.promise.then(() => sub));
     }
 
+    if (this.connectionState === 'connected') {
+      await this.sendSubscribe(subs);
+    }
+
+    return Promise.all(promises);
+  }
+
+  protected async sendSubscriptions() {
+    const subs = this.subscriptions.filter((sub) => sub.qos === 0);
+
+    if (subs.length > 0) {
+      await this.sendSubscribe(subs);
+    }
+  }
+
+  private async sendSubscribe(subscriptions: Subscription[]) {
     const subscribePacket: SubscribePacket = {
       type: 'subscribe',
       id: this.nextPacketId(),
-      subscriptions: subs,
+      subscriptions,
     };
 
-    const deferred = new Deferred<SubackPacket, SubscribePacket>(
-      subscribePacket
-    );
-
-    this.unacknowledgedSubscribes.set(subscribePacket.id, deferred);
+    this.unacknowledgedSubscribes.set(subscribePacket.id, {
+      subscriptions: subscriptions,
+    });
 
     await this.send(subscribePacket);
 
-    return deferred.promise;
+    for (const sub of subscriptions) {
+      sub.state = 'unacknowledged';
+    }
   }
 
-  public async unsubscribe(topic: string): Promise<UnsubackPacket> {
+  public async unsubscribe(
+    topic: string
+  ): Promise<(Subscription | undefined)[]> {
     // TODO: support array of topics
 
     switch (this.connectionState) {
-      case 'connected':
-        break;
-      default:
+      case 'disconnecting':
+      case 'disconnected':
         throw new Error(
           `should not be unsubscribing in ${this.connectionState} state`
         );
     }
 
-    this.subscriptions = this.subscriptions.filter(
-      (sub) => sub.topic !== topic
-    );
+    const promises = [];
 
-    const unsubscribePacket: UnsubscribePacket = {
-      type: 'unsubscribe',
-      id: this.nextPacketId(),
-      topics: [topic],
-    };
+    const sub = this.subscriptions.find((sub) => sub.topic === topic);
 
-    const deferred = new Deferred<UnsubackPacket, UnsubscribePacket>(
-      unsubscribePacket
-    );
+    if (sub) {
+      if (sub.state === 'pending') {
+        sub.state = 'removed';
 
-    this.unacknowledgedUnsubscribes.set(unsubscribePacket.id, deferred);
+        this.subscriptions = this.subscriptions.filter(
+          (sub) => sub.topic !== topic
+        );
+      } else {
+        sub.state = 'unsubscribe-pending';
+      }
+    }
 
-    await this.send(unsubscribePacket);
+    const unresolvedSubscribe = this.unresolvedSubscribes.get(topic);
 
-    return deferred.promise;
+    if (unresolvedSubscribe) {
+      this.unresolvedSubscribes.delete(topic);
+
+      unresolvedSubscribe.resolve(null);
+    }
+
+    const deferred = new Deferred<UnsubackPacket | null>();
+
+    this.unresolvedUnsubscribes.set(topic, deferred);
+
+    promises.push(deferred.promise.then(() => sub));
+
+    if (this.connectionState === 'connected') {
+      const unsubscribePacket: UnsubscribePacket = {
+        type: 'unsubscribe',
+        id: this.nextPacketId(),
+        topics: [topic],
+      };
+
+      this.unacknowledgedUnsubscribes.set(unsubscribePacket.id, {
+        subscriptions: [sub],
+      });
+
+      await this.send(unsubscribePacket);
+
+      if (sub) {
+        sub.state = 'unsubscribe-unacknowledged';
+      }
+    }
+
+    return Promise.all(promises);
   }
 
   public async disconnect(): Promise<void> {
@@ -368,7 +441,29 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
     }
   }
 
-  // This gets by subclasses when the connection is unexpectedly closed.
+  // This gets called when the connection is fully established (after receiving the CONNACK packet).
+  protected async connectionEstablished(connactPacket: ConnackPacket) {
+    if (this.unacknowledgedConnect) {
+      this.log('resolving initial connect');
+
+      this.unacknowledgedConnect.resolve(connactPacket);
+    }
+
+    // TODO: if clean session or no session present, reset subscriptions
+
+    await this.sendSubscriptions();
+    await this.flushQueuedPackets();
+
+    // TODO: resend unacknowledged publish and pubcomp packets
+
+    if (this.disconnectRequested) {
+      this.doDisconnect();
+    } else {
+      this.startKeepAliveTimer();
+    }
+  }
+
+  // This gets called by subclasses when the connection is unexpectedly closed.
   protected connectionClosed() {
     this.log('connectionClosed');
 
@@ -481,18 +576,9 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
 
     this.everConnected = true;
 
-    if (this.unacknowledgedConnect) {
-      this.log('resolving initial connect');
-
-      this.unacknowledgedConnect.resolve(packet);
-    }
-
-    this.sendSubscriptions();
-    // TODO: resend unacknowledged publish and pubcomp packets
-    // TODO: flush publishes queued while not connected
-    this.flushQueuedPackets();
     this.stopConnectTimer();
-    this.startKeepAliveTimer();
+
+    this.connectionEstablished(packet);
   }
 
   protected handlePublish(packet: PublishPacket) {
@@ -528,7 +614,7 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
 
     if (deferred) {
       this.unacknowledgedPublishes.delete(packet.id);
-      deferred.resolve(packet);
+      deferred.resolve();
     } else {
       this.log(`received puback packet with unrecognized id ${packet.id}`);
     }
@@ -555,26 +641,65 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
   }
 
   protected handleSuback(packet: SubackPacket) {
-    const deferred = this.unacknowledgedSubscribes.get(packet.id);
+    const unacknowledgedSubscribe = this.unacknowledgedSubscribes.get(
+      packet.id
+    );
 
     // TODO: verify returnCodes length matches subscriptions.length
 
-    if (deferred) {
+    if (unacknowledgedSubscribe) {
       this.unacknowledgedSubscribes.delete(packet.id);
-      deferred.resolve(packet);
+
+      let i = 0;
+
+      for (const sub of unacknowledgedSubscribe.subscriptions) {
+        sub.state = 'acknowledged';
+        sub.returnCode = packet.returnCodes[i++];
+
+        const deferred = this.unresolvedSubscribes.get(sub.topic);
+
+        if (deferred) {
+          this.unresolvedSubscribes.delete(sub.topic);
+
+          deferred.resolve(packet);
+        }
+      }
     } else {
-      this.log(`received suback packet with unrecognized id ${packet.id}`);
+      throw new Error(
+        `received suback packet with unrecognized id ${packet.id}`
+      );
     }
   }
 
   protected handleUnsuback(packet: UnsubackPacket) {
-    const deferred = this.unacknowledgedUnsubscribes.get(packet.id);
+    const unacknowledgedUnsubscribe = this.unacknowledgedUnsubscribes.get(
+      packet.id
+    );
 
-    if (deferred) {
+    if (unacknowledgedUnsubscribe) {
       this.unacknowledgedUnsubscribes.delete(packet.id);
-      deferred.resolve(packet);
+
+      for (const sub of unacknowledgedUnsubscribe.subscriptions) {
+        if (!sub) {
+          continue;
+        }
+
+        sub.state = 'unsubscribe-acknowledged';
+
+        this.subscriptions = this.subscriptions.filter((s) => s !== sub);
+
+        const deferred = this.unresolvedUnsubscribes.get(sub.topic);
+
+        if (deferred) {
+          this.unresolvedUnsubscribes.delete(sub.topic);
+
+          deferred.resolve(packet);
+        }
+      }
     } else {
-      this.log(`received unsuback packet with unrecognized id ${packet.id}`);
+      throw new Error(
+        `received unsuback packet with unrecognized id ${packet.id}`
+      );
     }
   }
 
@@ -776,19 +901,6 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
     return !!this.timers[name];
   }
 
-  protected async sendSubscriptions() {
-    // Only qos 0 subscriptions.
-    const subs = this.subscriptions.filter((sub) => sub.qos === 0);
-
-    if (subs.length > 0) {
-      await this.send({
-        type: 'subscribe',
-        id: this.nextPacketId(),
-        subscriptions: subs,
-      });
-    }
-  }
-
   // Utility methods
 
   protected changeState(newState: ConnectionStates) {
@@ -888,10 +1000,6 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
     }
 
     this.queuedPackets = [];
-
-    if (this.disconnectRequested) {
-      await this.doDisconnect();
-    }
   }
 
   protected async send(packet: AnyPacket) {
@@ -941,17 +1049,15 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
   }
 }
 
-class Deferred<ResolveType, DataType> {
-  promise: Promise<ResolveType>;
-  resolve!: (val: ResolveType) => void;
+class Deferred<T> {
+  promise: Promise<T>;
+  resolve!: (val: T) => void;
   reject!: (err: Error) => void;
-  data?: DataType;
 
-  constructor(data?: DataType) {
+  constructor() {
     this.promise = new Promise((resolve, reject) => {
       this.resolve = resolve;
       this.reject = reject;
     });
-    this.data = data;
   }
 }

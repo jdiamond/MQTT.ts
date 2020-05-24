@@ -70,12 +70,17 @@ Deno.test('reconnecting resubscribes', async () => {
   const suback1Promise = client.subscribe(['topic1', 'topic2']);
 
   assertEquals(client.subscriptions, [
-    { topic: 'topic1', qos: 0 },
-    { topic: 'topic2', qos: 0 },
+    { topic: 'topic1', qos: 0, state: 'pending' },
+    { topic: 'topic2', qos: 0, state: 'pending' },
   ]);
 
   // Sleep a little to allow the subscribe packet to be sent.
   await client.sleep(1);
+
+  assertEquals(client.subscriptions, [
+    { topic: 'topic1', qos: 0, state: 'unacknowledged' },
+    { topic: 'topic2', qos: 0, state: 'unacknowledged' },
+  ]);
 
   const subscribe1 = client.sentPackets[1] as SubscribePacket;
 
@@ -91,13 +96,24 @@ Deno.test('reconnecting resubscribes', async () => {
     returnCodes: [0, 0],
   });
 
+  assertEquals(client.subscriptions, [
+    { topic: 'topic1', qos: 0, state: 'acknowledged', returnCode: 0 },
+    { topic: 'topic2', qos: 0, state: 'acknowledged', returnCode: 0 },
+  ]);
+
   const suback1 = await suback1Promise;
 
-  assertEquals(suback1.id, subscribe1.id);
+  assertEquals(suback1, [
+    { topic: 'topic1', qos: 0, state: 'acknowledged', returnCode: 0 },
+    { topic: 'topic2', qos: 0, state: 'acknowledged', returnCode: 0 },
+  ]);
 
   const unsubackPromise = client.unsubscribe('topic1');
 
-  assertEquals(client.subscriptions, [{ topic: 'topic2', qos: 0 }]);
+  assertEquals(client.subscriptions, [
+    { topic: 'topic1', qos: 0, state: 'unsubscribe-pending', returnCode: 0 },
+    { topic: 'topic2', qos: 0, state: 'acknowledged', returnCode: 0 },
+  ]);
 
   // Sleep a little to allow the unsubscribe packet to be sent.
   await client.sleep(1);
@@ -114,13 +130,22 @@ Deno.test('reconnecting resubscribes', async () => {
 
   const unsuback = await unsubackPromise;
 
-  assertEquals(unsuback.id, unsubscribe.id);
+  assertEquals(unsuback, [
+    {
+      topic: 'topic1',
+      qos: 0,
+      state: 'unsubscribe-acknowledged',
+      returnCode: 0,
+    },
+  ]);
 
-  // Subscribing to topic2 again (which we are still subscribe to)...
+  // Subscribing to topic2 again (which we are still subscribed to)...
   const suback2Promise = client.subscribe('topic2');
 
-  // ...should not add to the list of known subscriptions.
-  assertEquals(client.subscriptions, [{ topic: 'topic2', qos: 0 }]);
+  // ...resets the state back to pending.
+  assertEquals(client.subscriptions, [
+    { topic: 'topic2', qos: 0, state: 'pending' },
+  ]);
 
   // Sleep a little to allow the subscribe packet to be sent.
   await client.sleep(1);
@@ -130,6 +155,11 @@ Deno.test('reconnecting resubscribes', async () => {
   assertEquals(subscribe2.type, 'subscribe');
   assertEquals(subscribe2.subscriptions, [{ topic: 'topic2', qos: 0 }]);
 
+  // The subscription state is now unacknowledged.
+  assertEquals(client.subscriptions, [
+    { topic: 'topic2', qos: 0, state: 'unacknowledged' },
+  ]);
+
   client.testReceivePacket({
     type: 'suback',
     id: subscribe2.id,
@@ -138,7 +168,14 @@ Deno.test('reconnecting resubscribes', async () => {
 
   const suback2 = await suback2Promise;
 
-  assertEquals(suback2.id, subscribe2.id);
+  assertEquals(suback2, [
+    { topic: 'topic2', qos: 0, state: 'acknowledged', returnCode: 0 },
+  ]);
+
+  // The subscription state is now acknowledged.
+  assertEquals(client.subscriptions, [
+    { topic: 'topic2', qos: 0, state: 'acknowledged', returnCode: 0 },
+  ]);
 
   // Break the connection so we can test resubscribing.
   client.testCloseConnection();

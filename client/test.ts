@@ -17,6 +17,7 @@ export class TestClient extends BaseClient<TestClientOptions> {
   constructor(options: TestClientOptions = {}) {
     super({
       ...options,
+      // logger: console.log,
     });
   }
 
