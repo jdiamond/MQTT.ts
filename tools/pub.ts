@@ -68,13 +68,13 @@ async function main() {
 
   logger.info(`connected to ${args.url}`);
 
-  const puback = await client.publish(args.topic, args.message, {
+  await client.publish(args.topic, args.message, {
     qos: args.qos,
     retain: args.retain,
   });
 
-  if (puback) {
-    logger.info(`received puback for message id ${puback.id}`);
+  if (args.qos) {
+    logger.info(`publish acknowledged`);
   }
 
   await client.disconnect();

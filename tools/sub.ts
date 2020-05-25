@@ -70,12 +70,12 @@ async function main() {
 
   const topicFilters = Array.isArray(args.topic) ? args.topic : [args.topic];
 
-  const suback = await client.subscribe(topicFilters, args.qos);
+  const subscriptions = await client.subscribe(topicFilters, args.qos);
 
   logger.info(
-    `received suback for topic filters ${topicFilters
-      .map((tf) => `"${tf}"`)
-      .join(', ')}, return codes: ${suback.returnCodes.join(', ')}`
+    `received acknowledgment for subscriptions: ${subscriptions
+      .map((sub) => `"${sub.topic}" (${sub.returnCode})`)
+      .join(', ')}`
   );
 }
 
