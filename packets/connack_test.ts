@@ -41,6 +41,27 @@ Deno.test('decodeConnackPacket', function decodeConnackPacket() {
 });
 
 Deno.test(
+  'enodeConnackPacketWithSessionPresent',
+  function decodeConnackPacketWithSessionPresent() {
+    assertEquals(
+      encode({
+        type: 'connack',
+        sessionPresent: true,
+        returnCode: 0,
+      }),
+      [
+        // fixedHeader
+        32, // packetType + flags
+        2, // remainingLength
+        // variableHeader
+        1, // connack flags (sessionPresent)
+        0, // return code
+      ]
+    );
+  }
+);
+
+Deno.test(
   'decodeConnackPacketWithSessionPresent',
   function decodeConnackPacketWithSessionPresent() {
     assertEquals(

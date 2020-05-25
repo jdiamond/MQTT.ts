@@ -68,43 +68,46 @@ Deno.test('open throws, connect does not reject when retries > 0', async () => {
   assertEquals(client.sentPackets.length, 0);
 });
 
-Deno.test('open throws, connect rejects when connect.retries is 0', async () => {
-  const client = new TestClient({
-    openRejects: 1,
-    connect: { retries: 0 },
-  });
+Deno.test(
+  'open throws, connect rejects when connect.retries is 0',
+  async () => {
+    const client = new TestClient({
+      openRejects: 1,
+      connect: { retries: 0 },
+    });
 
-  let connectRejected = false;
+    let connectRejected = false;
 
-  client.connect().catch(() => {
-    connectRejected = true;
-  });
+    client.connect().catch(() => {
+      connectRejected = true;
+    });
 
-  assertEquals(client.connectionState, 'connecting');
+    assertEquals(client.connectionState, 'connecting');
 
-  // Sleep a little to allow open to throw.
-  await client.sleep(1);
+    // Sleep a little to allow open to throw.
+    await client.sleep(1);
 
-  assertEquals(client.connectionState, 'offline');
+    assertEquals(client.connectionState, 'offline');
 
-  // No connect packet should have been written.
-  assertEquals(client.sentPackets.length, 0);
+    // No connect packet should have been written.
+    assertEquals(client.sentPackets.length, 0);
 
-  // The promise returned from connect should have rejected.
-  assertEquals(connectRejected, true);
+    // The promise returned from connect should have rejected.
+    assertEquals(connectRejected, true);
 
-  // Calling disconnect in the offline state is a no-op and transitions directly
-  // to the disconnected state.
-  client.disconnect();
+    // Calling disconnect in the offline state is a no-op and transitions directly
+    // to the disconnected state.
+    client.disconnect();
 
-  assertEquals(client.connectionState, 'disconnected');
+    assertEquals(client.connectionState, 'disconnected');
 
-  // Sleep long enough for the disconnect packet to have been written.
-  await client.sleep(1);
+    // Sleep long enough for the disconnect packet to have been written.
+    await client.sleep(1);
 
-  // But no disconnect packet should have been written.
-  assertEquals(client.sentPackets.length, 0);
-});
+    // But no disconnect packet should have been written.
+    assertEquals(client.sentPackets.length, 0);
+  }
+);
 
 Deno.test('waiting for connack times out', async () => {
   const client = new TestClient({ connectTimeout: 5 });
@@ -170,3 +173,50 @@ Deno.test('connect rejects when connect.retries is 0', async () => {
   assertEquals(connectResolved, false);
   assertEquals(connectRejected, true);
 });
+
+Deno.test(
+  'connect does not reslove until the first successful connection',
+  async () => {
+    const client = new TestClient({ openRejects: 1 });
+
+    let connectResolved = false;
+
+    client.connect().then(() => {
+      connectResolved = true;
+    });
+
+    assertEquals(client.connectionState, 'connecting');
+
+    // Sleep a little to allow open to reject.
+    await client.sleep(1);
+
+    assertEquals(client.connectionState, 'offline');
+    assertEquals(connectResolved, false);
+
+    client.testTriggerTimer('reconnect');
+
+    assertEquals(client.connectionState, 'connecting');
+    assertEquals(connectResolved, false);
+
+    // Sleep a little to allow the connect packet to be sent.
+    await client.sleep(1);
+
+    assertEquals(client.connectionState, 'waiting-for-connack');
+    assertEquals(connectResolved, false);
+
+    client.testReceivePacket({
+      type: 'connack',
+      returnCode: 0,
+      sessionPresent: false,
+    });
+
+    assertEquals(client.connectionState, 'connected');
+    assertEquals(connectResolved, false);
+
+    // Sleep a little to allow the connect promise to resolve.
+    await client.sleep(1);
+
+    assertEquals(client.connectionState, 'connected');
+    assertEquals(connectResolved, true);
+  }
+);

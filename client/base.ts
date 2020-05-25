@@ -270,7 +270,7 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
   }
 
   protected async sendSubscriptions() {
-    const subs = this.subscriptions.filter((sub) => sub.qos === 0);
+    const subs = this.subscriptions.filter((sub) => sub.state === 'pending');
 
     if (subs.length > 0) {
       await this.sendSubscribe(subs);
@@ -442,14 +442,18 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
   }
 
   // This gets called when the connection is fully established (after receiving the CONNACK packet).
-  protected async connectionEstablished(connactPacket: ConnackPacket) {
+  protected async connectionEstablished(connackPacket: ConnackPacket) {
     if (this.unacknowledgedConnect) {
       this.log('resolving initial connect');
 
-      this.unacknowledgedConnect.resolve(connactPacket);
+      this.unacknowledgedConnect.resolve(connackPacket);
     }
 
-    // TODO: if clean session or no session present, reset subscriptions
+    if (this.options.clean !== false || !connackPacket.sessionPresent) {
+      for (const sub of this.subscriptions) {
+        sub.state = 'pending';
+      }
+    }
 
     await this.sendSubscriptions();
     await this.flushQueuedPackets();

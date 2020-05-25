@@ -205,69 +205,185 @@ Deno.test('subscribe and unsubscribe called while connecting', async () => {
   assertEquals(suback1, [{ topic: 'topic1', qos: 0, state: 'removed' }]);
 });
 
-// publish or subscribe before connect?
+Deno.test('reconnecting resubscribes', async () => {
+  const client = new TestClient();
 
-// connect called
-// online
-// subscribe called
-// subscribe sent
-// suback received
-// original subscribe call resolved
-// offline
-// reconnect
-// online
-// resubscribe
-// subscribe sent
-// suback received
-// orignal subscribe call not resolved again
+  client.connect();
 
-// connect called
-// subscribe called while connecting
-// online
-// subscribe sent
-// suback received
-// original subscribe call resolved
-// offline
-// reconnect
-// online
-// subscribe sent
-// suback received
-// orignal subscribe call not resolved again
+  assertEquals(client.connectionState, 'connecting');
 
-// connect called
-// subscribe called while connecting
-// unsubscribe called while connecting
-// online
-// subscribe sent
-// suback received
-// original subscribe call resolved
-// unsubscribe sent
-// unsuback received
-// original unsubscribe call resolved
-// offline
-// reconnect
-// online
-// nothing to resubscribe
+  // Sleep a little to allow the connect packet to be sent.
+  await client.sleep(1);
 
-// connect called
-// online
-// subscribe called while online
-// subscribe sent
-// suback received
-// original subscribe call resolved
-// offline
-// unsubscribe called while offline
-// reconnect
-// online
-// ?
+  assertEquals(client.sentPackets[0].type, 'connect');
+  assertEquals(client.connectionState, 'waiting-for-connack');
 
-// if subscription is stored in session on server, do not resubscribe?
-// check for clean and session present flags?
+  client.testReceivePacket({
+    type: 'connack',
+    returnCode: 0,
+    sessionPresent: false,
+  });
 
-// if unsubscribe called before subscribe packet is sent, remove subscriptions from subscribe packet?
-// if no subscriptions left, do not send subscribe packet?
-// original subscribe call never resolves?
+  assertEquals(client.connectionState, 'connected');
 
-// subscription states?
-// pending, sent, acknowledged?
-// need state or boolean to indicate subscription stored in session on server?
+  const subscribe1Promise = client.subscribe('topic1');
+
+  assertEquals(client.subscriptions, [
+    { topic: 'topic1', qos: 0, state: 'pending' },
+  ]);
+
+  // Sleep a little to allow the subscribe packet to be sent.
+  await client.sleep(1);
+
+  assertEquals(client.subscriptions, [
+    { topic: 'topic1', qos: 0, state: 'unacknowledged' },
+  ]);
+
+  const subscribe1Packet = client.sentPackets[1] as SubscribePacket;
+
+  assertEquals(subscribe1Packet.type, 'subscribe');
+  assertEquals(subscribe1Packet.subscriptions, [{ topic: 'topic1', qos: 0 }]);
+
+  client.testReceivePacket({
+    type: 'suback',
+    id: subscribe1Packet.id,
+    returnCodes: [0],
+  });
+
+  assertEquals(client.subscriptions, [
+    { topic: 'topic1', qos: 0, state: 'acknowledged', returnCode: 0 },
+  ]);
+
+  const subscribe1Result = await subscribe1Promise;
+
+  assertEquals(subscribe1Result, [
+    { topic: 'topic1', qos: 0, state: 'acknowledged', returnCode: 0 },
+  ]);
+
+  // Break the connection so we can test resubscribing.
+  client.testCloseConnection();
+
+  assertEquals(client.connectionState, 'offline');
+
+  client.testTriggerTimer('reconnect');
+
+  assertEquals(client.connectionState, 'connecting');
+
+  // Sleep a little to allow the connect packet to be sent.
+  await client.sleep(1);
+
+  assertEquals(client.sentPackets[2].type, 'connect');
+  assertEquals(client.connectionState, 'waiting-for-connack');
+
+  client.testReceivePacket({
+    type: 'connack',
+    returnCode: 0,
+    sessionPresent: false,
+  });
+
+  assertEquals(client.connectionState, 'connected');
+
+  // Sleep a little to allow the subscribe packet to be sent.
+  await client.sleep(1);
+
+  assertEquals(client.sentPackets[3].type, 'subscribe');
+  assertEquals((client.sentPackets[3] as SubscribePacket).subscriptions, [
+    { topic: 'topic1', qos: 0 },
+  ]);
+});
+
+Deno.test(
+  'reconnecting does not resubscribe when not clean and session present',
+  async () => {
+    const client = new TestClient({ clean: false });
+
+    client.connect();
+
+    assertEquals(client.connectionState, 'connecting');
+
+    // Sleep a little to allow the connect packet to be sent.
+    await client.sleep(1);
+
+    assertEquals(client.sentPackets.length, 1);
+    assertEquals(client.sentPackets[0].type, 'connect');
+    assertEquals(client.connectionState, 'waiting-for-connack');
+
+    client.testReceivePacket({
+      type: 'connack',
+      returnCode: 0,
+      sessionPresent: false,
+    });
+
+    assertEquals(client.connectionState, 'connected');
+
+    const subscribe1Promise = client.subscribe('topic1');
+
+    assertEquals(client.subscriptions, [
+      { topic: 'topic1', qos: 0, state: 'pending' },
+    ]);
+
+    // Sleep a little to allow the subscribe packet to be sent.
+    await client.sleep(1);
+
+    assertEquals(client.subscriptions, [
+      { topic: 'topic1', qos: 0, state: 'unacknowledged' },
+    ]);
+
+    assertEquals(client.sentPackets.length, 2);
+    const subscribe1Packet = client.sentPackets[1] as SubscribePacket;
+
+    assertEquals(subscribe1Packet.type, 'subscribe');
+    assertEquals(subscribe1Packet.subscriptions, [{ topic: 'topic1', qos: 0 }]);
+
+    client.testReceivePacket({
+      type: 'suback',
+      id: subscribe1Packet.id,
+      returnCodes: [0],
+    });
+
+    assertEquals(client.subscriptions, [
+      { topic: 'topic1', qos: 0, state: 'acknowledged', returnCode: 0 },
+    ]);
+
+    const subscribe1Result = await subscribe1Promise;
+
+    assertEquals(subscribe1Result, [
+      { topic: 'topic1', qos: 0, state: 'acknowledged', returnCode: 0 },
+    ]);
+
+    // Break the connection so we can test resubscribing.
+    client.testCloseConnection();
+
+    assertEquals(client.connectionState, 'offline');
+
+    client.testTriggerTimer('reconnect');
+
+    assertEquals(client.connectionState, 'connecting');
+
+    // Sleep a little to allow the connect packet to be sent.
+    await client.sleep(1);
+
+    assertEquals(client.sentPackets.length, 3);
+    assertEquals(client.sentPackets[2].type, 'connect');
+    assertEquals(client.connectionState, 'waiting-for-connack');
+
+    client.testReceivePacket({
+      type: 'connack',
+      returnCode: 0,
+      sessionPresent: true,
+    });
+
+    assertEquals(client.connectionState, 'connected');
+
+    // Session is present so subscription state stays the same.
+    assertEquals(client.subscriptions, [
+      { topic: 'topic1', qos: 0, state: 'acknowledged', returnCode: 0 },
+    ]);
+
+    // Sleep a little to allow the subscribe packet to be sent.
+    await client.sleep(1);
+
+    // But it doesn't get sent.
+    assertEquals(client.sentPackets.length, 3);
+  }
+);
