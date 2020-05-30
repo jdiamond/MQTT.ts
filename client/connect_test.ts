@@ -175,7 +175,7 @@ Deno.test('connect rejects when connect.retries is 0', async () => {
 });
 
 Deno.test(
-  'connect does not reslove until the first successful connection',
+  'connect does not resolve until the first successful connection',
   async () => {
     const client = new TestClient({ openRejects: 1 });
 

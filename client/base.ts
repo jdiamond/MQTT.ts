@@ -163,8 +163,6 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
     this.log = this.options.logger || (() => {});
   }
 
-  // Public methods
-
   public async connect(): Promise<ConnackPacket> {
     switch (this.connectionState) {
       case 'offline':
@@ -235,13 +233,11 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
     }
 
     const arr = Array.isArray(topic) ? topic : [topic];
-
     const subs = arr.map<Subscription>((sub) => {
       return typeof sub === 'object'
         ? { topic: sub.topic, qos: sub.qos || qos || 0, state: 'pending' }
         : { topic: sub, qos: qos || 0, state: 'pending' };
     });
-
     const promises = [];
 
     for (const sub of subs) {
@@ -262,17 +258,15 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
       promises.push(deferred.promise.then(() => sub));
     }
 
-    if (this.connectionState === 'connected') {
-      await this.sendSubscribe(subs);
-    }
+    await this.flushSubscriptions();
 
     return Promise.all(promises);
   }
 
-  protected async sendSubscriptions() {
+  protected async flushSubscriptions() {
     const subs = this.subscriptions.filter((sub) => sub.state === 'pending');
 
-    if (subs.length > 0) {
+    if (subs.length > 0 && this.connectionState === 'connected') {
       await this.sendSubscribe(subs);
     }
   }
@@ -285,7 +279,7 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
     };
 
     this.unacknowledgedSubscribes.set(subscribePacket.id, {
-      subscriptions: subscriptions,
+      subscriptions,
     });
 
     await this.send(subscribePacket);
@@ -296,10 +290,8 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
   }
 
   public async unsubscribe(
-    topic: string
+    topic: string | string[]
   ): Promise<(Subscription | undefined)[]> {
-    // TODO: support array of topics
-
     switch (this.connectionState) {
       case 'disconnecting':
       case 'disconnected':
@@ -308,55 +300,106 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
         );
     }
 
+    const arr = Array.isArray(topic) ? topic : [topic];
     const promises = [];
 
-    const sub = this.subscriptions.find((sub) => sub.topic === topic);
-
-    if (sub) {
-      if (sub.state === 'pending') {
-        sub.state = 'removed';
-
-        this.subscriptions = this.subscriptions.filter(
-          (sub) => sub.topic !== topic
-        );
-      } else {
-        sub.state = 'unsubscribe-pending';
-      }
-    }
-
-    const unresolvedSubscribe = this.unresolvedSubscribes.get(topic);
-
-    if (unresolvedSubscribe) {
-      this.unresolvedSubscribes.delete(topic);
-
-      unresolvedSubscribe.resolve(null);
-    }
-
-    const deferred = new Deferred<UnsubackPacket | null>();
-
-    this.unresolvedUnsubscribes.set(topic, deferred);
-
-    promises.push(deferred.promise.then(() => sub));
-
-    if (this.connectionState === 'connected') {
-      const unsubscribePacket: UnsubscribePacket = {
-        type: 'unsubscribe',
-        id: this.nextPacketId(),
-        topics: [topic],
-      };
-
-      this.unacknowledgedUnsubscribes.set(unsubscribePacket.id, {
-        subscriptions: [sub],
-      });
-
-      await this.send(unsubscribePacket);
+    for (const topic of arr) {
+      const sub = this.subscriptions.find((sub) => sub.topic === topic);
+      const deferred = new Deferred<UnsubackPacket | null>();
+      const promise = deferred.promise.then(() => sub);
 
       if (sub) {
-        sub.state = 'unsubscribe-unacknowledged';
+        if (
+          this.connectionState !== 'connected' &&
+          this.options.clean !== false
+        ) {
+          sub.state = 'removed';
+        } else {
+          switch (sub.state) {
+            case 'pending':
+              sub.state = 'removed';
+              break;
+            case 'removed':
+            case 'replaced':
+              // Subscriptions with these states should have already been removed.
+              break;
+            case 'unacknowledged':
+            case 'acknowledged':
+              sub.state = 'unsubscribe-pending';
+              break;
+            case 'unsubscribe-pending':
+            case 'unsubscribe-unacknowledged':
+            case 'unsubscribe-acknowledged':
+              // Why is this happening?
+              break;
+          }
+        }
+
+        this.unresolvedUnsubscribes.set(topic, deferred);
+
+        promises.push(promise);
       }
     }
 
+    await this.flushUnsubscriptions();
+
     return Promise.all(promises);
+  }
+
+  protected async flushUnsubscriptions() {
+    const subs = [];
+
+    for (const sub of this.subscriptions) {
+      if (sub.state === 'removed') {
+        const unresolvedSubscribe = this.unresolvedSubscribes.get(sub.topic);
+
+        if (unresolvedSubscribe) {
+          this.unresolvedSubscribes.delete(sub.topic);
+
+          unresolvedSubscribe.resolve(null);
+        }
+
+        const unresolvedUnsubscribe = this.unresolvedUnsubscribes.get(
+          sub.topic
+        );
+
+        if (unresolvedUnsubscribe) {
+          this.unresolvedUnsubscribes.delete(sub.topic);
+
+          unresolvedUnsubscribe.resolve(null);
+        }
+      }
+
+      if (sub.state === 'unsubscribe-pending') {
+        subs.push(sub);
+      }
+    }
+
+    this.subscriptions = this.subscriptions.filter(
+      (sub) => sub.state !== 'removed'
+    );
+
+    if (subs.length > 0 && this.connectionState === 'connected') {
+      await this.sendUnsubscribe(subs);
+    }
+  }
+
+  private async sendUnsubscribe(subscriptions: Subscription[]) {
+    const unsubscribePacket: UnsubscribePacket = {
+      type: 'unsubscribe',
+      id: this.nextPacketId(),
+      topics: subscriptions.map((sub) => sub.topic),
+    };
+
+    this.unacknowledgedUnsubscribes.set(unsubscribePacket.id, {
+      subscriptions,
+    });
+
+    await this.send(unsubscribePacket);
+
+    for (const sub of subscriptions) {
+      sub.state = 'unsubscribe-unacknowledged';
+    }
   }
 
   public async disconnect(): Promise<void> {
@@ -386,7 +429,7 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
     await this.close();
   }
 
-  // Connection methods implemented by subclasses
+  // Methods implemented by subclasses
 
   protected abstract getDefaultURL(): URL | string;
 
@@ -451,11 +494,16 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
 
     if (this.options.clean !== false || !connackPacket.sessionPresent) {
       for (const sub of this.subscriptions) {
-        sub.state = 'pending';
+        if (sub.state === 'unsubscribe-pending') {
+          sub.state = 'removed';
+        } else {
+          sub.state = 'pending';
+        }
       }
     }
 
-    await this.sendSubscriptions();
+    await this.flushSubscriptions();
+    await this.flushUnsubscriptions();
     await this.flushQueuedPackets();
 
     // TODO: resend unacknowledged publish and pubcomp packets
