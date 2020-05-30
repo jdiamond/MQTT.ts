@@ -1,4 +1,4 @@
-import { QoS } from '../types.ts';
+import { QoS } from '../lib/mod.ts';
 import { encodeLength } from './length.ts';
 import {
   UTF8Encoder,

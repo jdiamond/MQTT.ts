@@ -2,7 +2,7 @@
   "name": "browser",
   "private": true,
   "scripts": {
-    "build": "cd ../../build && npm run build:browser && cd ../examples/browser && cp ../../build/browser.mjs .",
+    "build": "cd ../../browser && npm run build && cd ../examples/browser && cp ../../browser/index.mjs .",
     "start": "serve"
   },
   "dependencies": {

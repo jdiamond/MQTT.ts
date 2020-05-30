@@ -1,4 +1,4 @@
-import { BaseClient, BaseClientOptions } from './base.ts';
+import { BaseClient, BaseClientOptions } from '../client/base.ts';
 import { AnyPacket } from '../packets/mod.ts';
 
 export type ClientOptions = BaseClientOptions & {};

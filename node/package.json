@@ -1,0 +1,52 @@
+{
+  "name": "@jdiamond/mqtt",
+  "version": "0.0.5",
+  "description": "MQTT in TypeScript for Node.js",
+  "license": "MIT",
+  "homepage": "https://github.com/jdiamond/MQTT.ts",
+  "contributors": [
+    "Jason Diamond <jason@diamond.name> (https://github.com/jdiamond)"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jdiamond/MQTT.ts.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jdiamond/MQTT.ts/issues"
+  },
+  "keywords": [
+    "MQTT"
+  ],
+  "main": "./index.js",
+  "module": "./index.mjs",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "require": "./index.js",
+      "import": "./index.mjs",
+      "default": "./index.js"
+    }
+  },
+  "types": "./index.d.ts",
+  "files": [
+    "index.d.ts",
+    "index.js",
+    "index.mjs"
+  ],
+  "dependencies": {},
+  "devDependencies": {
+    "@babel/cli": "^7.8.4",
+    "@babel/core": "^7.9.6",
+    "@babel/preset-env": "^7.9.6",
+    "@types/node": "^14.0.4",
+    "typescript": "^3.9.3"
+  },
+  "scripts": {
+    "prepack": "npm run build",
+    "build": "npm run build:node && ./build-node-types.sh",
+    "build:node": "npm run build:node:bundle && npm run build:node:esm && npm run build:node:cjs",
+    "build:node:bundle": "deno bundle ./index.ts index.bundle.js",
+    "build:node:esm": "babel --config-file ./node-esm.json index.bundle.js > index.mjs",
+    "build:node:cjs": "babel --config-file ./node-cjs.json index.bundle.js > index.js"
+  }
+}

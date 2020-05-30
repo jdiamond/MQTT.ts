@@ -1,0 +1,54 @@
+{
+  "name": "@jdiamond/mqtt-browser",
+  "version": "0.0.5",
+  "description": "MQTT in TypeScript for browsers",
+  "license": "MIT",
+  "homepage": "https://github.com/jdiamond/MQTT.ts",
+  "contributors": [
+    "Jason Diamond <jason@diamond.name> (https://github.com/jdiamond)"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jdiamond/MQTT.ts.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jdiamond/MQTT.ts/issues"
+  },
+  "keywords": [
+    "MQTT"
+  ],
+  "browser": "./index.js",
+  "module": "./index.mjs",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "require": "./index.js",
+      "import": "./index.mjs",
+      "default": "./index.js"
+    }
+  },
+  "types": "./index.d.ts",
+  "unpkg": "./index.min.mjs",
+  "files": [
+    "index.min.js",
+    "index.min.mjs"
+  ],
+  "dependencies": {},
+  "devDependencies": {
+    "@babel/cli": "^7.8.4",
+    "@babel/core": "^7.9.6",
+    "@babel/preset-env": "^7.9.6",
+    "terser": "^4.6.13",
+    "typescript": "^3.9.3"
+  },
+  "scripts": {
+    "prepack": "npm run build",
+    "build": "npm run build:browser && ./build-browser-types.sh",
+    "build:browser": "npm run build:browser:bundle && npm run build:browser:esm && npm run build:browser:esm:min && npm run build:browser:umd && npm run build:browser:umd:min",
+    "build:browser:bundle": "deno bundle ./index.ts index.bundle.js",
+    "build:browser:esm": "babel --config-file ./browser-esm.json index.bundle.js > index.mjs",
+    "build:browser:esm:min": "terser index.mjs -o index.min.mjs",
+    "build:browser:umd": "babel --config-file ./browser-umd.json index.bundle.js > index.js",
+    "build:browser:umd:min": "terser index.js -o index.min.js"
+  }
+}

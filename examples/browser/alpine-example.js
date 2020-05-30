@@ -1,5 +1,5 @@
-// import { Client } from 'https://unpkg.com/@jdiamond/mqtt';
-import { Client } from './browser.mjs';
+// import { Client } from 'https://unpkg.com/@jdiamond/mqtt-browser';
+import { Client } from './index.mjs';
 
 window.mqtt = {
   connect(url) {
