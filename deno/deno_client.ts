@@ -1,4 +1,7 @@
-import { BaseClient, BaseClientOptions } from '../client/base.ts';
+import {
+  Client as BaseClient,
+  ClientOptions as BaseClientOptions,
+} from '../client/base_client.ts';
 import { AnyPacket } from '../packets/mod.ts';
 
 export type ClientOptions = BaseClientOptions & {};
@@ -8,7 +11,7 @@ const DEFAULT_BUF_SIZE = 4096;
 const utf8Encoder = new TextEncoder();
 const utf8Decoder = new TextDecoder();
 
-export class Client extends BaseClient<ClientOptions> {
+export class Client extends BaseClient {
   private conn: Deno.Conn | undefined;
   private closing = false;
 

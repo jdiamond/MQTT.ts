@@ -1,5 +1,5 @@
 import { assertEquals } from 'https://deno.land/std@0.50.0/testing/asserts.ts';
-import { TestClient } from './test.ts';
+import { TestClient } from './test_client.ts';
 
 Deno.test('connect/disconnect', async () => {
   const client = new TestClient();

@@ -1,4 +1,7 @@
-import { BaseClient, BaseClientOptions } from '../client/base.ts';
+import {
+  Client as BaseClient,
+  ClientOptions as BaseClientOptions,
+} from '../client/base_client.ts';
 import { AnyPacket } from '../packets/mod.ts';
 
 export type ClientOptions = BaseClientOptions & {};
@@ -17,7 +20,7 @@ declare class WebSocket {
 const utf8Encoder = new TextEncoder();
 const utf8Decoder = new TextDecoder();
 
-export class Client extends BaseClient<ClientOptions> {
+export class Client extends BaseClient {
   private ws: WebSocket | undefined;
 
   constructor(options?: ClientOptions) {

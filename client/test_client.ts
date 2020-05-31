@@ -1,4 +1,7 @@
-import { BaseClient, BaseClientOptions } from './base.ts';
+import {
+  Client as BaseClient,
+  ClientOptions as BaseClientOptions,
+} from './base_client.ts';
 import { AnyPacket } from '../packets/mod.ts';
 
 type TestClientOptions = BaseClientOptions & {
@@ -8,7 +11,8 @@ type TestClientOptions = BaseClientOptions & {
 const utf8Encoder = new TextEncoder();
 const utf8Decoder = new TextDecoder();
 
-export class TestClient extends BaseClient<TestClientOptions> {
+export class TestClient extends BaseClient {
+  options!: TestClientOptions;
   sentPackets: AnyPacket[] = [];
   receivedPackets: AnyPacket[] = [];
   timerCallbacks: { [key: string]: Function } = {};

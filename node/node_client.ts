@@ -1,4 +1,7 @@
-import { BaseClient, BaseClientOptions } from '../client/base.ts';
+import {
+  Client as BaseClient,
+  ClientOptions as BaseClientOptions,
+} from '../client/base_client.ts';
 import { AnyPacket } from '../packets/mod.ts';
 
 export type ClientOptions = BaseClientOptions & {};
@@ -34,7 +37,7 @@ const utf8Decoder = {
   },
 };
 
-export class Client extends BaseClient<ClientOptions> {
+export class Client extends BaseClient {
   private socket: Socket | null = null;
   private socketState: undefined | 'connecting' | 'connected' | 'failed';
 

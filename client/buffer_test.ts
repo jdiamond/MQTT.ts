@@ -1,5 +1,5 @@
 import { assertEquals } from 'https://deno.land/std@0.50.0/testing/asserts.ts';
-import { TestClient } from './test.ts';
+import { TestClient } from './test_client.ts';
 import { PublishPacket, encode } from '../packets/mod.ts';
 
 Deno.test('client can receive one byte at a time', async () => {

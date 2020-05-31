@@ -20,7 +20,7 @@ import { UTF8Encoder, UTF8Decoder } from '../packets/utf8.ts';
 type URLFactory = URL | string | (() => URL | string | void);
 type ClientIdFactory = string | (() => string);
 
-export type BaseClientOptions = {
+export type ClientOptions = {
   url?: URLFactory;
   clientId?: ClientIdFactory;
   clientIdPrefix?: string;
@@ -102,8 +102,8 @@ const defaultReconnectOptions = {
   random: true,
 };
 
-export abstract class BaseClient<OptionsType extends BaseClientOptions> {
-  options: OptionsType;
+export abstract class Client {
+  options: ClientOptions;
   url?: URL;
   clientId: string;
   keepAlive: number;
@@ -152,8 +152,8 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
 
   log: (msg: string, ...args: unknown[]) => void;
 
-  public constructor(options?: OptionsType) {
-    this.options = options || <OptionsType>{};
+  public constructor(options?: ClientOptions) {
+    this.options = options || {};
     this.clientId = this.generateClientId();
     this.keepAlive =
       typeof this.options.keepAlive === 'number'
