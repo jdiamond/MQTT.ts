@@ -99,13 +99,27 @@ Protocol Links:
 - 3.1.1: https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html
 - 3.1: https://public.dhe.ibm.com/software/dw/webservices/ws-mqtt/mqtt-v3r1.html
 
-## TODO
+## Roadmap to 1.0
 
-- finish api docs
-- also support protocol versions 3.1 and 5.0
-- async iterators for messages matching topic patterns
-- address all TODO comments in code
-- benchmarking and performance improvements
-- round robin connect to multiple brokers
+- finish API docs
+- protocol version 3.1
 - mqtts for deno and node clients
 - use native event target/emitter classes
+- events for messages matching topic filters
+- async iterators for messages matching topic filters
+- qos 1 and 2 stores
+- resend unacknowledged publish and pubrel packets on reconnect
+- make disconnect wait until all publishes sent/acknowledged
+- address all TODO comments in code
+- release process
+  - tag for denopkg.com and deno.land/x to use
+  - publish Node.js and browser builds to npm
+    - keep in sync or allow versions to drift?
+
+## Post 1.0
+
+- protocol version 5.0
+- round robin connect to multiple brokers
+- benchmarking and performance improvements
+- MQTT over QUIC
+- base class for server applications?
