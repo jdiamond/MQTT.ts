@@ -71,7 +71,6 @@ export type Subscription = {
 type ConnectionStates =
   | 'offline'
   | 'connecting'
-  | 'waiting-for-connack'
   | 'connected'
   | 'disconnecting'
   | 'disconnected';
@@ -408,7 +407,6 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
         await this.doDisconnect();
         break;
       case 'connecting':
-      case 'waiting-for-connack':
         this.disconnectRequested = true;
         break;
       case 'offline':
@@ -471,8 +469,6 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
         clean: this.options.clean !== false,
         keepAlive: this.keepAlive,
       });
-
-      this.changeState('waiting-for-connack');
 
       this.startConnectTimer();
     } catch (err) {
@@ -616,7 +612,7 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
 
   protected handleConnack(packet: ConnackPacket) {
     switch (this.connectionState) {
-      case 'waiting-for-connack':
+      case 'connecting':
         break;
       default:
         throw new Error(
@@ -767,11 +763,11 @@ export abstract class BaseClient<OptionsType extends BaseClientOptions> {
 
   protected connectTimedOut() {
     switch (this.connectionState) {
-      case 'waiting-for-connack':
+      case 'connecting':
         break;
       default:
         throw new Error(
-          `connect timer should time out in ${this.connectionState} state`
+          `connect timer should not be timing out in ${this.connectionState} state`
         );
     }
 

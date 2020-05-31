@@ -15,7 +15,7 @@ Deno.test('subscribe and unsubscribe called while connected', async () => {
 
   assertEquals(client.sentPackets.length, 1);
   assertEquals(client.sentPackets[0].type, 'connect');
-  assertEquals(client.connectionState, 'waiting-for-connack');
+  assertEquals(client.connectionState, 'connecting');
 
   client.testReceivePacket({
     type: 'connack',
@@ -151,7 +151,7 @@ Deno.test('subscribe called while connecting', async () => {
 
   assertEquals(client.sentPackets.length, 1);
   assertEquals(client.sentPackets[0].type, 'connect');
-  assertEquals(client.connectionState, 'waiting-for-connack');
+  assertEquals(client.connectionState, 'connecting');
 
   client.testReceivePacket({
     type: 'connack',
@@ -223,7 +223,7 @@ Deno.test('reconnecting resubscribes', async () => {
   await client.sleep(1);
 
   assertEquals(client.sentPackets[0].type, 'connect');
-  assertEquals(client.connectionState, 'waiting-for-connack');
+  assertEquals(client.connectionState, 'connecting');
 
   client.testReceivePacket({
     type: 'connack',
@@ -280,7 +280,7 @@ Deno.test('reconnecting resubscribes', async () => {
   await client.sleep(1);
 
   assertEquals(client.sentPackets[2].type, 'connect');
-  assertEquals(client.connectionState, 'waiting-for-connack');
+  assertEquals(client.connectionState, 'connecting');
 
   client.testReceivePacket({
     type: 'connack',
@@ -313,7 +313,7 @@ Deno.test(
 
     assertEquals(client.sentPackets.length, 1);
     assertEquals(client.sentPackets[0].type, 'connect');
-    assertEquals(client.connectionState, 'waiting-for-connack');
+    assertEquals(client.connectionState, 'connecting');
 
     client.testReceivePacket({
       type: 'connack',
@@ -372,7 +372,7 @@ Deno.test(
 
     assertEquals(client.sentPackets.length, 3);
     assertEquals(client.sentPackets[2].type, 'connect');
-    assertEquals(client.connectionState, 'waiting-for-connack');
+    assertEquals(client.connectionState, 'connecting');
 
     client.testReceivePacket({
       type: 'connack',
@@ -409,7 +409,7 @@ Deno.test(
 
     assertEquals(client.sentPackets.length, 1);
     assertEquals(client.sentPackets[0].type, 'connect');
-    assertEquals(client.connectionState, 'waiting-for-connack');
+    assertEquals(client.connectionState, 'connecting');
 
     client.testReceivePacket({
       type: 'connack',
@@ -489,7 +489,7 @@ Deno.test(
 
     assertEquals(client.sentPackets.length, 1);
     assertEquals(client.sentPackets[0].type, 'connect');
-    assertEquals(client.connectionState, 'waiting-for-connack');
+    assertEquals(client.connectionState, 'connecting');
 
     client.testReceivePacket({
       type: 'connack',
@@ -560,7 +560,7 @@ Deno.test(
 
     assertEquals(client.sentPackets.length, 3);
     assertEquals(client.sentPackets[2].type, 'connect');
-    assertEquals(client.connectionState, 'waiting-for-connack');
+    assertEquals(client.connectionState, 'connecting');
 
     client.testReceivePacket({
       type: 'connack',
@@ -627,7 +627,7 @@ Deno.test(
 
     assertEquals(client.sentPackets.length, 1);
     assertEquals(client.sentPackets[0].type, 'connect');
-    assertEquals(client.connectionState, 'waiting-for-connack');
+    assertEquals(client.connectionState, 'connecting');
 
     client.testReceivePacket({
       type: 'connack',
@@ -700,7 +700,7 @@ Deno.test(
 
     assertEquals(client.sentPackets.length, 3);
     assertEquals(client.sentPackets[2].type, 'connect');
-    assertEquals(client.connectionState, 'waiting-for-connack');
+    assertEquals(client.connectionState, 'connecting');
 
     client.testReceivePacket({
       type: 'connack',

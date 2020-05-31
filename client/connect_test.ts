@@ -12,7 +12,7 @@ Deno.test('connect/disconnect', async () => {
   await client.sleep(1);
 
   assertEquals(client.sentPackets[0].type, 'connect');
-  assertEquals(client.connectionState, 'waiting-for-connack');
+  assertEquals(client.connectionState, 'connecting');
 
   client.testReceivePacket({
     type: 'connack',
@@ -123,7 +123,7 @@ Deno.test('waiting for connack times out', async () => {
   assertEquals(client.sentPackets[0].type, 'connect');
 
   // And we are waiting for a connack packet.
-  assertEquals(client.connectionState, 'waiting-for-connack');
+  assertEquals(client.connectionState, 'connecting');
 
   // This is when we should receive the connack packet.
   // Simulate time passing by manually triggering the connect timer.
@@ -201,7 +201,7 @@ Deno.test(
     // Sleep a little to allow the connect packet to be sent.
     await client.sleep(1);
 
-    assertEquals(client.connectionState, 'waiting-for-connack');
+    assertEquals(client.connectionState, 'connecting');
     assertEquals(connectResolved, false);
 
     client.testReceivePacket({

@@ -25,7 +25,7 @@ Deno.test('connect/publish/disconnect without await', async () => {
 
   assertEquals(client.sentPackets.length, 1);
   assertEquals(client.sentPackets[0].type, 'connect');
-  assertEquals(client.connectionState, 'waiting-for-connack');
+  assertEquals(client.connectionState, 'connecting');
 
   client.testReceivePacket({
     type: 'connack',

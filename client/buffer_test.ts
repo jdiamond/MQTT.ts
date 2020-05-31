@@ -13,7 +13,7 @@ Deno.test('client can receive one byte at a time', async () => {
   await client.sleep(1);
 
   assertEquals(client.sentPackets[0].type, 'connect');
-  assertEquals(client.connectionState, 'waiting-for-connack');
+  assertEquals(client.connectionState, 'connecting');
 
   client.testReceivePacket(
     {
@@ -69,7 +69,7 @@ Deno.test('client can receive bytes for multiple packets at once', async () => {
   await client.sleep(1);
 
   assertEquals(client.sentPackets[0].type, 'connect');
-  assertEquals(client.connectionState, 'waiting-for-connack');
+  assertEquals(client.connectionState, 'connecting');
 
   client.testReceivePacket({
     type: 'connack',
