@@ -1,6 +1,6 @@
 {
   "name": "@jdiamond/mqtt-browser",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "MQTT in TypeScript for browsers",
   "license": "MIT",
   "homepage": "https://github.com/jdiamond/MQTT.ts",
@@ -17,7 +17,6 @@
   "keywords": [
     "MQTT"
   ],
-  "browser": "./index.js",
   "module": "./index.mjs",
   "sideEffects": false,
   "exports": {
@@ -30,8 +29,10 @@
   "types": "./index.d.ts",
   "unpkg": "./index.min.mjs",
   "files": [
+    "index.js",
     "index.min.js",
-    "index.min.mjs"
+    "index.min.mjs",
+    "index.mjs"
   ],
   "dependencies": {},
   "devDependencies": {
