@@ -31,6 +31,7 @@ export class Client extends BaseClient {
   }
 
   protected async open(url: URL) {
+    // TODO: check for permission denied error and show a helpful message and avoid reconnect?
     const conn = await Deno.connect({
       hostname: url.hostname,
       port: Number(url.port),

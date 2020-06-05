@@ -31,6 +31,8 @@ export type ClientOptions = {
   connectTimeout?: number;
   connect?: boolean | RetryOptions;
   reconnect?: boolean | RetryOptions;
+  incomingStore?: IncomingStore;
+  outgoingStore?: OutgoingStore;
   logger?: (msg: string, ...args: unknown[]) => void;
 };
 
@@ -77,6 +79,77 @@ type ConnectionStates =
 
 const packetIdLimit = 2 ** 16;
 
+// Only used for incoming QoS 2 messages.
+export abstract class IncomingStore {
+  // On receiving a PublishPacket with QoS 2 and the dup flag set to false,
+  // store the packet identifier and deliver the message to the application.
+  abstract store(packetId: number): Promise<void>;
+
+  // On receiving a PublishPacket with QoS 2 and the dup flag set to true, if
+  // the store still has the packet identifier, don't resend it to the
+  // application.
+  abstract has(packetId: number): Promise<boolean>;
+
+  // After receiving a PubrelPacket, discared the packet identifier.
+  abstract discard(packetId: number): Promise<void>;
+}
+
+export class IncomingMemoryStore extends IncomingStore {
+  packets = new Set<number>();
+
+  async store(packetId: number): Promise<void> {
+    this.packets.add(packetId);
+  }
+
+  async has(packetId: number): Promise<boolean> {
+    return this.packets.has(packetId);
+  }
+
+  async discard(packetId: number): Promise<void> {
+    this.packets.delete(packetId);
+  }
+}
+
+// Used for outgoing QoS 1 and 2 messages.
+export abstract class OutgoingStore {
+  // Store a PublishPacket so it can be resent if the connection is lost. In QoS
+  // 2, storing a PubrelPacket (after receiving a PubrecPacket) marks the
+  // original PublishPacket as received so it can be discarded and replaced with
+  // the PubrelPacket.
+  abstract store(packet: PublishPacket | PubrelPacket): Promise<void>;
+
+  // Discard the PublishPacket or PubrelPacket associated with this packet
+  // identifier. For QoS 1, this gets called after receiveng a PubackPacket. For
+  // QoS 2, this gets called after receiving a PubcompPacket.
+  abstract discard(packetId: number): Promise<void>;
+
+  // Used on reconnecting to resend publish and pubrel packets. Packets are
+  // supposed to be resent in the order they were stored.
+  abstract iterate(): AsyncIterable<PublishPacket | PubrelPacket>;
+}
+
+export class OutgoingMemoryStore extends OutgoingStore {
+  packets = new Map<number, PublishPacket | PubrelPacket>();
+
+  async store(packet: PublishPacket | PubrelPacket): Promise<void> {
+    if (!packet.id) {
+      throw new Error('missing packet.id');
+    }
+
+    this.packets.set(packet.id, packet);
+  }
+
+  async discard(packetId: number): Promise<void> {
+    this.packets.delete(packetId);
+  }
+
+  async *iterate(): AsyncIterable<PublishPacket | PubrelPacket> {
+    for (const value of this.packets.values()) {
+      yield value;
+    }
+  }
+}
+
 const defaultPorts: { [protocol: string]: number } = {
   mqtt: 1883,
   mqtts: 8883,
@@ -118,29 +191,39 @@ export abstract class Client {
 
   private buffer: Uint8Array | null = null;
 
-  queuedPackets: AnyPacket[] = [];
+  private unresolvedConnect?: Deferred<ConnackPacket>;
 
-  unacknowledgedConnect?: Deferred<ConnackPacket>;
+  private queuedPublishes: {
+    packet: PublishPacket;
+    deferred: Deferred<void>;
+  }[] = [];
 
-  private unacknowledgedPublishes = new Map<number, Deferred<void>>();
+  private unresolvedPublishes = new Map<number, Deferred<void>>();
+
+  protected incomingStore: IncomingStore;
+  protected outgoingStore: OutgoingStore;
+
   private unresolvedSubscribes = new Map<
     string,
     Deferred<SubackPacket | null>
   >();
+
   private unresolvedUnsubscribes = new Map<
     string,
     Deferred<UnsubackPacket | null>
   >();
+
   private unacknowledgedSubscribes = new Map<
     number,
     {
       subscriptions: Subscription[];
     }
   >();
+
   private unacknowledgedUnsubscribes = new Map<
     number,
     {
-      subscriptions: (Subscription | undefined)[];
+      subscriptions: Subscription[];
     }
   >();
 
@@ -159,6 +242,12 @@ export abstract class Client {
       typeof this.options.keepAlive === 'number'
         ? this.options.keepAlive
         : defaultKeepAlive;
+
+    this.incomingStore =
+      this.options.incomingStore || new IncomingMemoryStore();
+    this.outgoingStore =
+      this.options.outgoingStore || new OutgoingMemoryStore();
+
     this.log = this.options.logger || (() => {});
   }
 
@@ -177,7 +266,7 @@ export abstract class Client {
 
     const deferred = new Deferred<ConnackPacket>();
 
-    this.unacknowledgedConnect = deferred;
+    this.unresolvedConnect = deferred;
 
     this.openConnection();
 
@@ -204,19 +293,50 @@ export abstract class Client {
       id,
     };
 
-    let result = undefined;
+    const deferred = new Deferred<void>();
 
-    if (qos > 0) {
-      const deferred = new Deferred<void>();
+    if (this.connectionState === 'connected') {
+      this.sendPublish(packet, deferred);
+    } else {
+      this.log('queueing publish');
 
-      this.unacknowledgedPublishes.set(id, deferred);
-
-      result = deferred.promise;
+      this.queuedPublishes.push({ packet, deferred });
     }
 
-    await this.queue(packet);
+    return deferred.promise;
+  }
 
-    return result;
+  protected async flushQueuedPublishes() {
+    let queued;
+
+    while ((queued = this.queuedPublishes.shift())) {
+      const { packet, deferred } = queued;
+
+      this.sendPublish(packet, deferred);
+    }
+  }
+
+  protected async flushUnacknowledgedPublishes() {
+    for await (const packet of this.outgoingStore.iterate()) {
+      if (packet.type === 'publish') {
+        await this.send({ ...packet, dup: true });
+      } else {
+        await this.send(packet);
+      }
+    }
+  }
+
+  protected async sendPublish(packet: PublishPacket, deferred: Deferred<void>) {
+    if (packet.qos && packet.qos > 0) {
+      this.unresolvedPublishes.set(packet.id!, deferred);
+      this.outgoingStore.store(packet);
+    }
+
+    await this.send(packet);
+
+    if (!packet.qos) {
+      deferred.resolve();
+    }
   }
 
   public async subscribe(
@@ -472,6 +592,8 @@ export abstract class Client {
 
       this.startConnectTimer();
     } catch (err) {
+      this.log(`caught error opening connection: ${err.message}`);
+
       this.changeState('offline');
 
       if (!this.startReconnectTimer()) {
@@ -482,12 +604,6 @@ export abstract class Client {
 
   // This gets called when the connection is fully established (after receiving the CONNACK packet).
   protected async connectionEstablished(connackPacket: ConnackPacket) {
-    if (this.unacknowledgedConnect) {
-      this.log('resolving initial connect');
-
-      this.unacknowledgedConnect.resolve(connackPacket);
-    }
-
     if (this.options.clean !== false || !connackPacket.sessionPresent) {
       for (const sub of this.subscriptions) {
         if (sub.state === 'unsubscribe-pending') {
@@ -500,9 +616,14 @@ export abstract class Client {
 
     await this.flushSubscriptions();
     await this.flushUnsubscriptions();
-    await this.flushQueuedPackets();
+    await this.flushUnacknowledgedPublishes();
+    await this.flushQueuedPublishes();
 
-    // TODO: resend unacknowledged publish and pubcomp packets
+    if (this.unresolvedConnect) {
+      this.log('resolving initial connect');
+
+      this.unresolvedConnect.resolve(connackPacket);
+    }
 
     if (this.disconnectRequested) {
       this.doDisconnect();
@@ -658,10 +779,12 @@ export abstract class Client {
   }
 
   protected handlePuback(packet: PubackPacket) {
-    const deferred = this.unacknowledgedPublishes.get(packet.id);
+    this.outgoingStore.discard(packet.id);
+
+    const deferred = this.unresolvedPublishes.get(packet.id);
 
     if (deferred) {
-      this.unacknowledgedPublishes.delete(packet.id);
+      this.unresolvedPublishes.delete(packet.id);
       deferred.resolve();
     } else {
       this.log(`received puback packet with unrecognized id ${packet.id}`);
@@ -669,11 +792,14 @@ export abstract class Client {
   }
 
   protected handlePubrec(packet: PubrecPacket) {
-    // TODO: mark message as received
-    this.send({
+    const pubrel: PubrelPacket = {
       type: 'pubrel',
       id: packet.id,
-    });
+    };
+
+    this.outgoingStore.store(pubrel);
+
+    this.send(pubrel);
   }
 
   protected handlePubrel(packet: PubrelPacket) {
@@ -684,8 +810,17 @@ export abstract class Client {
     });
   }
 
-  protected handlePubcomp(_packet: PubcompPacket) {
-    // TODO: mark message as completely acknowledged
+  protected handlePubcomp(packet: PubcompPacket) {
+    this.outgoingStore.discard(packet.id);
+
+    const deferred = this.unresolvedPublishes.get(packet.id);
+
+    if (deferred) {
+      this.unresolvedPublishes.delete(packet.id);
+      deferred.resolve();
+    } else {
+      this.log(`received pubcomp packet with unrecognized id ${packet.id}`);
+    }
   }
 
   protected handleSuback(packet: SubackPacket) {
@@ -783,10 +918,10 @@ export abstract class Client {
   }
 
   protected notifyConnectRejected(err: Error) {
-    if (this.unacknowledgedConnect) {
+    if (this.unresolvedConnect) {
       this.log('rejecting initial connect');
 
-      this.unacknowledgedConnect.reject(err);
+      this.unresolvedConnect.reject(err);
     }
   }
 
@@ -891,6 +1026,8 @@ export abstract class Client {
         await this.send({
           type: 'pingreq',
         });
+
+        // TODO: need a timer here to disconnect if we don't receive the pingres
       }
 
       this.startKeepAliveTimer();
@@ -1030,24 +1167,6 @@ export abstract class Client {
     }
 
     return this.lastPacketId;
-  }
-
-  protected async queue(packet: AnyPacket) {
-    if (this.connectionState !== 'connected') {
-      this.log(`queueing ${packet.type} packet`);
-
-      this.queuedPackets.push(packet);
-    } else {
-      return this.send(packet);
-    }
-  }
-
-  protected async flushQueuedPackets() {
-    for (const packet of this.queuedPackets) {
-      await this.send(packet);
-    }
-
-    this.queuedPackets = [];
   }
 
   protected async send(packet: AnyPacket) {

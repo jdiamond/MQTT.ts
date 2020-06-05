@@ -107,8 +107,6 @@ Protocol Links:
 - use native event target/emitter classes
 - events for messages matching topic filters
 - async iterators for messages matching topic filters
-- qos 1 and 2 stores
-- resend unacknowledged publish and pubrel packets on reconnect
 - make disconnect wait until all publishes sent/acknowledged
 - address all TODO comments in code
 - release process
