@@ -9,7 +9,7 @@ Since the core of the library has no dependencies, it wasn't too difficult to ad
 ## Quick Start
 
 ```
-import { Client } from 'https://denopkg.com/jdiamond/MQTT.ts/deno/mod.ts'; // Deno (ESM)
+import { Client } from 'https://deno.land/x/mqtt/deno/mod.ts'; // Deno (ESM)
 // const { Client } = require('@jdiamond/mqtt'); // Node.js (CommonJS)
 // import { Client } from 'https://unpkg.com/@jdiamond/mqtt-browser'; // Browsers (ESM)
 
@@ -110,7 +110,7 @@ Protocol Links:
 - make disconnect wait until all publishes sent/acknowledged
 - address all TODO comments in code
 - release process
-  - tag for denopkg.com and deno.land/x to use
+  - tag for deno.land/x to use
   - publish Node.js and browser builds to npm
     - keep in sync or allow versions to drift?
 
