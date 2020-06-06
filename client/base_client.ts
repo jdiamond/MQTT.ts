@@ -750,15 +750,17 @@ export abstract class Client {
     this.connectionEstablished(packet);
   }
 
-  protected handlePublish(packet: PublishPacket) {
-    this.emit('message', packet.topic, packet.payload, packet);
-
-    if (packet.qos === 1) {
+  protected async handlePublish(packet: PublishPacket) {
+    if (packet.qos === 0) {
+      this.emit('message', packet.topic, packet.payload, packet);
+    } else if (packet.qos === 1) {
       if (typeof packet.id !== 'number' || packet.id < 1) {
         return this.protocolViolation(
           'publish packet with qos 1 is missing id'
         );
       }
+
+      this.emit('message', packet.topic, packet.payload, packet);
 
       this.send({
         type: 'puback',
@@ -769,6 +771,15 @@ export abstract class Client {
         return this.protocolViolation(
           'publish packet with qos 2 is missing id'
         );
+      }
+
+      const emitMessage =
+        !packet.dup || !(await this.incomingStore.has(packet.id));
+
+      if (emitMessage) {
+        this.incomingStore.store(packet.id);
+
+        this.emit('message', packet.topic, packet.payload, packet);
       }
 
       this.send({
@@ -803,7 +814,8 @@ export abstract class Client {
   }
 
   protected handlePubrel(packet: PubrelPacket) {
-    // TODO: mark message as released
+    this.incomingStore.discard(packet.id);
+
     this.send({
       type: 'pubcomp',
       id: packet.id,

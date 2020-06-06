@@ -1,5 +1,10 @@
 import { assertEquals } from 'https://deno.land/std@0.50.0/testing/asserts.ts';
-import { PublishPacket, PubrelPacket } from '../packets/mod.ts';
+import {
+  PublishPacket,
+  PubrelPacket,
+  PubrecPacket,
+  PubcompPacket,
+} from '../packets/mod.ts';
 import { TestClient } from './test_client.ts';
 
 Deno.test('publish qos 0 while connected', async () => {
@@ -403,5 +408,110 @@ Deno.test(
 
     // ...but no new packets get sent.
     assertEquals(client.sentPackets.length, 8);
+  }
+);
+
+Deno.test(
+  'receiving multiple qos 2 publishes does not emit message more than once',
+  async () => {
+    const client = new TestClient();
+
+    const emittedMessages = [];
+
+    client.on('message', (topic: string, payload: Uint8Array) => {
+      emittedMessages.push({ topic, payload });
+    });
+
+    client.connect();
+
+    assertEquals(client.connectionState, 'connecting');
+
+    // Sleep a little to allow the connect packet to be sent.
+    await client.sleep(1);
+
+    client.testReceivePacket({
+      type: 'connack',
+      returnCode: 0,
+      sessionPresent: false,
+    });
+
+    assertEquals(client.connectionState, 'connected');
+
+    client.testReceivePacket({
+      type: 'publish',
+      topic: 'topic1',
+      payload: 'payload1',
+      qos: 2,
+      id: 12,
+      dup: false,
+    });
+
+    await client.sleep(1);
+
+    assertEquals(emittedMessages.length, 1);
+
+    await client.sleep(1);
+
+    assertEquals(client.sentPackets.length, 2);
+    assertEquals(client.sentPackets[1].type, 'pubrec');
+    assertEquals((client.sentPackets[1] as PubrecPacket).id, 12);
+
+    client.testCloseConnection();
+
+    client.testTriggerTimer('reconnect');
+
+    assertEquals(client.connectionState, 'connecting');
+
+    // Sleep a little to allow the connect packet to be sent.
+    await client.sleep(1);
+
+    client.testReceivePacket({
+      type: 'connack',
+      returnCode: 0,
+      sessionPresent: false,
+    });
+
+    assertEquals(client.connectionState, 'connected');
+
+    client.testReceivePacket({
+      type: 'publish',
+      topic: 'topic1',
+      payload: 'payload1',
+      qos: 2,
+      id: 12,
+      dup: true,
+    });
+
+    assertEquals(emittedMessages.length, 1);
+
+    await client.sleep(1);
+
+    assertEquals(client.sentPackets.length, 4);
+    assertEquals(client.sentPackets[3].type, 'pubrec');
+    assertEquals((client.sentPackets[3] as PubrecPacket).id, 12);
+
+    client.testReceivePacket({
+      type: 'pubrel',
+      id: 12,
+    });
+
+    await client.sleep(1);
+
+    assertEquals(client.sentPackets.length, 5);
+    assertEquals(client.sentPackets[4].type, 'pubcomp');
+    assertEquals((client.sentPackets[4] as PubcompPacket).id, 12);
+
+    client.testReceivePacket({
+      type: 'publish',
+      topic: 'topic2',
+      payload: 'payload2',
+      qos: 2,
+      id: 13,
+      dup: true,
+    });
+
+    await client.sleep(1);
+
+    assertEquals(emittedMessages.length, 2);
   }
 );
