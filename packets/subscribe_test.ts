@@ -8,8 +8,8 @@ Deno.test('encodeSubscribePacket', function encodeSubscribePacket() {
         type: 'subscribe',
         id: 1,
         subscriptions: [
-          { topic: 'a/b', qos: 0 },
-          { topic: 'c/d', qos: 1 },
+          { topicFilter: 'a/b', qos: 0 },
+          { topicFilter: 'c/d', qos: 1 },
         ],
       },
       new TextEncoder()
@@ -22,14 +22,14 @@ Deno.test('encodeSubscribePacket', function encodeSubscribePacket() {
       0, // id MSB
       1, // id LSB
       // payload
-      0, // topic length MSB
-      3, // topic length LSB
+      0, // topic filter length MSB
+      3, // topic filter length LSB
       97, // 'a'
       47, // '/'
       98, // 'b'
       0, // qos
-      0, // topic length MSB
-      3, // topic length LSB
+      0, // topic filter length MSB
+      3, // topic filter length LSB
       99, // 'c'
       47, // '/'
       100, // 'd'
@@ -49,14 +49,14 @@ Deno.test('decodeSubscribePacket', function decodeSubscribePacket() {
         0, // id MSB
         1, // id LSB
         // payload
-        0, // topic length MSB
-        3, // topic length LSB
+        0, // topic filter length MSB
+        3, // topic filter length LSB
         97, // 'a'
         47, // '/'
         98, // 'b'
         0, // qos
-        0, // topic length MSB
-        3, // topic length LSB
+        0, // topic filter length MSB
+        3, // topic filter length LSB
         99, // 'c'
         47, // '/'
         100, // 'd'
@@ -68,8 +68,8 @@ Deno.test('decodeSubscribePacket', function decodeSubscribePacket() {
       type: 'subscribe',
       id: 1,
       subscriptions: [
-        { topic: 'a/b', qos: 0 },
-        { topic: 'c/d', qos: 1 },
+        { topicFilter: 'a/b', qos: 0 },
+        { topicFilter: 'c/d', qos: 1 },
       ],
       length: 16,
     }

@@ -14,7 +14,7 @@ export interface SubscribePacket {
 }
 
 export type Subscription = {
-  topic: string;
+  topicFilter: string;
   qos: QoS;
 };
 
@@ -28,7 +28,7 @@ export default {
     const payload = [];
 
     for (const sub of packet.subscriptions) {
-      payload.push(...encodeUTF8String(sub.topic, utf8Encoder), sub.qos);
+      payload.push(...encodeUTF8String(sub.topicFilter, utf8Encoder), sub.qos);
     }
 
     const fixedHeader = [
@@ -52,8 +52,8 @@ export default {
     const subscriptions: Subscription[] = [];
 
     for (let i = subscriptionsStart; i < buffer.length; ) {
-      const topic = decodeUTF8String(buffer, i, utf8Decoder);
-      i += topic.length;
+      const topicFilter = decodeUTF8String(buffer, i, utf8Decoder);
+      i += topicFilter.length;
 
       const qos = buffer[i];
       i += 1;
@@ -63,7 +63,7 @@ export default {
       }
 
       subscriptions.push({
-        topic: topic.value,
+        topicFilter: topicFilter.value,
         qos,
       });
     }

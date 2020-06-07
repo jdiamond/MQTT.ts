@@ -7,7 +7,7 @@ Deno.test('encodeUnsubscribePacket', function encodeUnsubscribePacket() {
       {
         type: 'unsubscribe',
         id: 1,
-        topics: ['a/b', 'c/d'],
+        topicFilters: ['a/b', 'c/d'],
       },
       new TextEncoder()
     ),
@@ -19,13 +19,13 @@ Deno.test('encodeUnsubscribePacket', function encodeUnsubscribePacket() {
       0, // id MSB
       1, // id LSB
       // payload
-      0, // topic length MSB
-      3, // topic length LSB
+      0, // topic filter length MSB
+      3, // topic filter length LSB
       97, // 'a'
       47, // '/'
       98, // 'b'
-      0, // topic length MSB
-      3, // topic length LSB
+      0, // topic filter length MSB
+      3, // topic filter length LSB
       99, // 'c'
       47, // '/'
       100, // 'd'
@@ -44,13 +44,13 @@ Deno.test('decodeUnsubscribePacket', function decodeUnsubscribePacket() {
         0, // id MSB
         1, // id LSB
         // payload
-        0, // topic length MSB
-        3, // topic length LSB
+        0, // topic filter length MSB
+        3, // topic filter length LSB
         97, // 'a'
         47, // '/'
         98, // 'b'
-        0, // topic length MSB
-        3, // topic length LSB
+        0, // topic filter length MSB
+        3, // topic filter length LSB
         99, // 'c'
         47, // '/'
         100, // 'd'
@@ -60,7 +60,7 @@ Deno.test('decodeUnsubscribePacket', function decodeUnsubscribePacket() {
     {
       type: 'unsubscribe',
       id: 1,
-      topics: ['a/b', 'c/d'],
+      topicFilters: ['a/b', 'c/d'],
       length: 14,
     }
   );

@@ -51,14 +51,15 @@ export type PublishOptions = {
 };
 
 export type SubscriptionOption = {
-  topic: string;
+  topicFilter: string;
   qos?: QoS;
 };
 
 export type Subscription = {
-  topic: string;
+  topicFilter: string;
   qos: QoS;
   state:
+    | 'unknown'
     | 'pending'
     | 'removed'
     | 'replaced'
@@ -200,8 +201,8 @@ export abstract class Client {
 
   private unresolvedPublishes = new Map<number, Deferred<void>>();
 
-  protected incomingStore: IncomingStore;
-  protected outgoingStore: OutgoingStore;
+  private incomingStore: IncomingStore;
+  private outgoingStore: OutgoingStore;
 
   private unresolvedSubscribes = new Map<
     string,
@@ -227,13 +228,13 @@ export abstract class Client {
     }
   >();
 
-  eventListeners: Map<string, Function[]> = new Map();
+  private eventListeners: Map<string, Function[]> = new Map();
 
   private timers: {
     [key: string]: any | undefined;
   } = {};
 
-  log: (msg: string, ...args: unknown[]) => void;
+  protected log: (msg: string, ...args: unknown[]) => void;
 
   public constructor(options?: ClientOptions) {
     this.options = options || {};
@@ -340,7 +341,27 @@ export abstract class Client {
   }
 
   public async subscribe(
-    topic: SubscriptionOption | string | (SubscriptionOption | string)[],
+    topicFilter: string,
+    qos?: QoS
+  ): Promise<Subscription[]>;
+
+  public async subscribe(
+    topicFilters: string[],
+    qos?: QoS
+  ): Promise<Subscription[]>;
+
+  public async subscribe(
+    subscription: SubscriptionOption,
+    qos?: QoS
+  ): Promise<Subscription[]>;
+
+  public async subscribe(
+    subscriptions: SubscriptionOption[],
+    qos?: QoS
+  ): Promise<Subscription[]>;
+
+  public async subscribe(
+    input: SubscriptionOption | string | (SubscriptionOption | string)[],
     qos?: QoS
   ): Promise<Subscription[]> {
     switch (this.connectionState) {
@@ -351,11 +372,15 @@ export abstract class Client {
         );
     }
 
-    const arr = Array.isArray(topic) ? topic : [topic];
+    const arr = Array.isArray(input) ? input : [input];
     const subs = arr.map<Subscription>((sub) => {
       return typeof sub === 'object'
-        ? { topic: sub.topic, qos: sub.qos || qos || 0, state: 'pending' }
-        : { topic: sub, qos: qos || 0, state: 'pending' };
+        ? {
+            topicFilter: sub.topicFilter,
+            qos: sub.qos || qos || 0,
+            state: 'pending',
+          }
+        : { topicFilter: sub, qos: qos || 0, state: 'pending' };
     });
     const promises = [];
 
@@ -365,14 +390,14 @@ export abstract class Client {
       // to do when it receives a subscribe packet containing a topic filter
       // matching an existing subscription.
       this.subscriptions = this.subscriptions.filter(
-        (old) => old.topic !== sub.topic
+        (old) => old.topicFilter !== sub.topicFilter
       );
 
       this.subscriptions.push(sub);
 
       const deferred = new Deferred<SubackPacket | null>();
 
-      this.unresolvedSubscribes.set(sub.topic, deferred);
+      this.unresolvedSubscribes.set(sub.topicFilter, deferred);
 
       promises.push(deferred.promise.then(() => sub));
     }
@@ -394,7 +419,10 @@ export abstract class Client {
     const subscribePacket: SubscribePacket = {
       type: 'subscribe',
       id: this.nextPacketId(),
-      subscriptions,
+      subscriptions: subscriptions.map((sub) => ({
+        topicFilter: sub.topicFilter,
+        qos: sub.qos,
+      })),
     };
 
     this.unacknowledgedSubscribes.set(subscribePacket.id, {
@@ -408,9 +436,11 @@ export abstract class Client {
     }
   }
 
-  public async unsubscribe(
-    topic: string | string[]
-  ): Promise<(Subscription | undefined)[]> {
+  public async unsubscribe(topicFilter: string): Promise<Subscription[]>;
+
+  public async unsubscribe(topicFilters: string[]): Promise<Subscription[]>;
+
+  public async unsubscribe(input: string | string[]): Promise<Subscription[]> {
     switch (this.connectionState) {
       case 'disconnecting':
       case 'disconnected':
@@ -419,45 +449,46 @@ export abstract class Client {
         );
     }
 
-    const arr = Array.isArray(topic) ? topic : [topic];
+    const arr = Array.isArray(input) ? input : [input];
     const promises = [];
 
-    for (const topic of arr) {
-      const sub = this.subscriptions.find((sub) => sub.topic === topic);
+    for (const topicFilter of arr) {
+      const sub = this.subscriptions.find(
+        (sub) => sub.topicFilter === topicFilter
+      ) || { topicFilter, qos: 0, state: 'unknown' };
       const deferred = new Deferred<UnsubackPacket | null>();
       const promise = deferred.promise.then(() => sub);
 
-      if (sub) {
-        if (
-          this.connectionState !== 'connected' &&
-          this.options.clean !== false
-        ) {
-          sub.state = 'removed';
-        } else {
-          switch (sub.state) {
-            case 'pending':
-              sub.state = 'removed';
-              break;
-            case 'removed':
-            case 'replaced':
-              // Subscriptions with these states should have already been removed.
-              break;
-            case 'unacknowledged':
-            case 'acknowledged':
-              sub.state = 'unsubscribe-pending';
-              break;
-            case 'unsubscribe-pending':
-            case 'unsubscribe-unacknowledged':
-            case 'unsubscribe-acknowledged':
-              // Why is this happening?
-              break;
-          }
+      if (
+        this.connectionState !== 'connected' &&
+        this.options.clean !== false
+      ) {
+        sub.state = 'removed';
+      } else {
+        switch (sub.state) {
+          case 'pending':
+            sub.state = 'removed';
+            break;
+          case 'removed':
+          case 'replaced':
+            // Subscriptions with these states should have already been removed.
+            break;
+          case 'unknown':
+          case 'unacknowledged':
+          case 'acknowledged':
+            sub.state = 'unsubscribe-pending';
+            break;
+          case 'unsubscribe-pending':
+          case 'unsubscribe-unacknowledged':
+          case 'unsubscribe-acknowledged':
+            // Why is this happening?
+            break;
         }
-
-        this.unresolvedUnsubscribes.set(topic, deferred);
-
-        promises.push(promise);
       }
+
+      this.unresolvedUnsubscribes.set(topicFilter, deferred);
+
+      promises.push(promise);
     }
 
     await this.flushUnsubscriptions();
@@ -470,20 +501,22 @@ export abstract class Client {
 
     for (const sub of this.subscriptions) {
       if (sub.state === 'removed') {
-        const unresolvedSubscribe = this.unresolvedSubscribes.get(sub.topic);
+        const unresolvedSubscribe = this.unresolvedSubscribes.get(
+          sub.topicFilter
+        );
 
         if (unresolvedSubscribe) {
-          this.unresolvedSubscribes.delete(sub.topic);
+          this.unresolvedSubscribes.delete(sub.topicFilter);
 
           unresolvedSubscribe.resolve(null);
         }
 
         const unresolvedUnsubscribe = this.unresolvedUnsubscribes.get(
-          sub.topic
+          sub.topicFilter
         );
 
         if (unresolvedUnsubscribe) {
-          this.unresolvedUnsubscribes.delete(sub.topic);
+          this.unresolvedUnsubscribes.delete(sub.topicFilter);
 
           unresolvedUnsubscribe.resolve(null);
         }
@@ -507,7 +540,7 @@ export abstract class Client {
     const unsubscribePacket: UnsubscribePacket = {
       type: 'unsubscribe',
       id: this.nextPacketId(),
-      topics: subscriptions.map((sub) => sub.topic),
+      topicFilters: subscriptions.map((sub) => sub.topicFilter),
     };
 
     this.unacknowledgedUnsubscribes.set(unsubscribePacket.id, {
@@ -851,10 +884,10 @@ export abstract class Client {
         sub.state = 'acknowledged';
         sub.returnCode = packet.returnCodes[i++];
 
-        const deferred = this.unresolvedSubscribes.get(sub.topic);
+        const deferred = this.unresolvedSubscribes.get(sub.topicFilter);
 
         if (deferred) {
-          this.unresolvedSubscribes.delete(sub.topic);
+          this.unresolvedSubscribes.delete(sub.topicFilter);
 
           deferred.resolve(packet);
         }
@@ -883,10 +916,10 @@ export abstract class Client {
 
         this.subscriptions = this.subscriptions.filter((s) => s !== sub);
 
-        const deferred = this.unresolvedUnsubscribes.get(sub.topic);
+        const deferred = this.unresolvedUnsubscribes.get(sub.topicFilter);
 
         if (deferred) {
-          this.unresolvedUnsubscribes.delete(sub.topic);
+          this.unresolvedUnsubscribes.delete(sub.topicFilter);
 
           deferred.resolve(packet);
         }

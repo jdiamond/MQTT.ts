@@ -74,7 +74,7 @@ async function main() {
 
   logger.info(
     `received acknowledgment for subscriptions: ${subscriptions
-      .map((sub) => `"${sub.topic}" (${sub.returnCode})`)
+      .map((sub) => `"${sub.topicFilter}" (${sub.returnCode})`)
       .join(', ')}`
   );
 }

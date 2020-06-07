@@ -9,7 +9,7 @@ import {
 export interface UnsubscribePacket {
   type: 'unsubscribe';
   id: number;
-  topics: string[];
+  topicFilters: string[];
 }
 
 export default {
@@ -21,7 +21,7 @@ export default {
 
     const payload = [];
 
-    for (const topic of packet.topics) {
+    for (const topic of packet.topicFilters) {
       payload.push(...encodeUTF8String(topic, utf8Encoder));
     }
 
@@ -42,20 +42,20 @@ export default {
     const idStart = remainingStart;
     const id = (buffer[idStart] << 8) + buffer[idStart + 1];
 
-    const topicsStart = idStart + 2;
-    const topics: string[] = [];
+    const topicFiltersStart = idStart + 2;
+    const topicFilters: string[] = [];
 
-    for (let i = topicsStart; i < buffer.length; ) {
-      const topic = decodeUTF8String(buffer, i, utf8Decoder);
-      i += topic.length;
+    for (let i = topicFiltersStart; i < buffer.length; ) {
+      const topicFilter = decodeUTF8String(buffer, i, utf8Decoder);
+      i += topicFilter.length;
 
-      topics.push(topic.value);
+      topicFilters.push(topicFilter.value);
     }
 
     return {
       type: 'unsubscribe',
       id,
-      topics,
+      topicFilters,
     };
   },
 };
