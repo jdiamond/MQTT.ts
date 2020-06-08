@@ -6,17 +6,18 @@ function usage() {
   console.log(`Usage: pub.ts -u mqtt://localhost -t topic/to/publish/to -m "message to publish"
 
 Options:
---log-level/-L  level to log (info or debug) [info]
---message/-m    message payload
---retain/-r     retain message [false]
---topic/-t      topic
---url/-u        broker url [mqtt://localhost]`);
+ --ca            certificate authority file
+ --log-level/-L  level to log (info or debug) [info]
+ --message/-m    message payload
+ --retain/-r     retain message [false]
+ --topic/-t      topic
+ --url/-u        broker url [mqtt://localhost]`);
 }
 
 async function main() {
   const args = parse(Deno.args, {
     boolean: ['help', 'retain'],
-    string: ['message', 'topic', 'url'],
+    string: ['ca', 'message', 'topic', 'url'],
     alias: {
       h: 'help',
       L: 'log-level',
@@ -61,6 +62,7 @@ async function main() {
 
   const client = new Client({
     url: args.url,
+    certFile: args.ca,
     logger: logger.debug.bind(logger),
   });
 

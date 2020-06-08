@@ -6,6 +6,7 @@ function usage() {
   console.log(`Usage: sub.ts -h localhost -p 1883 -t "topic/#" -v
 
 Options:
+ --ca             certificate authority file
  --clean          clean session (--no-clean to disable) [true]
  --client-id/-i   client id [random]
  --keep-alive/-k  keep alive in seconds [60]
@@ -19,7 +20,7 @@ Options:
 async function main() {
   const args = parse(Deno.args, {
     boolean: ['clean', 'help', 'verbose'],
-    string: ['topic', 'url'],
+    string: ['ca', 'topic', 'url'],
     alias: {
       h: 'help',
       i: 'client-id',
@@ -54,6 +55,7 @@ async function main() {
     clientId: args['client-id'],
     clean: args.clean,
     keepAlive: args['keep-alive'],
+    certFile: args.ca,
     logger: logger.debug.bind(logger),
   });
 

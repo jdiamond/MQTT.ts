@@ -4,7 +4,9 @@ import {
 } from '../client/base_client.ts';
 import { AnyPacket } from '../packets/mod.ts';
 
-export type ClientOptions = BaseClientOptions & {};
+export type ClientOptions = BaseClientOptions & {
+  certFile?: string;
+};
 
 const DEFAULT_BUF_SIZE = 4096;
 
@@ -12,6 +14,7 @@ const utf8Encoder = new TextEncoder();
 const utf8Decoder = new TextDecoder();
 
 export class Client extends BaseClient {
+  options!: ClientOptions;
   private conn: Deno.Conn | undefined;
   private closing = false;
 
@@ -24,18 +27,32 @@ export class Client extends BaseClient {
   }
 
   protected validateURL(url: URL) {
-    // TODO: add mqtts
-    if (url.protocol !== 'mqtt:') {
-      throw new Error(`URL protocol must be mqtt`);
+    if (url.protocol !== 'mqtt:' && url.protocol !== 'mqtts:') {
+      throw new Error(`URL protocol must be mqtt or mqtts`);
     }
   }
 
   protected async open(url: URL) {
     // TODO: check for permission denied error and show a helpful message and avoid reconnect?
-    const conn = await Deno.connect({
-      hostname: url.hostname,
-      port: Number(url.port),
-    });
+
+    let conn;
+
+    if (url.protocol === 'mqtt:') {
+      conn = await Deno.connect({
+        hostname: url.hostname,
+        port: Number(url.port),
+      });
+    } else if (url.protocol === 'mqtts:') {
+      // console.log(this.options.certFile);
+
+      conn = await Deno.connectTls({
+        hostname: url.hostname,
+        port: Number(url.port),
+        certFile: this.options.certFile,
+      });
+    } else {
+      throw new Error(`unknown URL protocol ${url.protocol.slice(0, -1)}`);
+    }
 
     this.conn = conn;
     this.closing = false;
