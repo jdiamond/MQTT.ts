@@ -17,7 +17,7 @@ done
 
 # Generate the .d.ts file.
 ./node_modules/.bin/tsc \
-  --lib es6,dom \
+  --lib es6,dom,esnext.asynciterable \
   --target es6 \
   --declaration \
   --emitDeclarationOnly \
