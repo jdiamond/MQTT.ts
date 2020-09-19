@@ -1,6 +1,6 @@
-import * as log from 'https://deno.land/std@0.50.0/log/mod.ts';
-import { LogRecord } from 'https://deno.land/std@0.50.0/log/logger.ts';
-import { LevelName } from 'https://deno.land/std@0.50.0/log/levels.ts';
+import * as log from 'https://deno.land/std@0.70.0/log/mod.ts';
+import { LogRecord } from 'https://deno.land/std@0.70.0/log/logger.ts';
+import { LevelName } from 'https://deno.land/std@0.70.0/log/levels.ts';
 
 export async function setupLogger(levelName: LevelName) {
   await log.setup({
