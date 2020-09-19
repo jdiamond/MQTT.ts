@@ -93,7 +93,28 @@ deno run --allow-net tools/sub.ts -t "foo/#" -v
 deno run --allow-net tools/pub.ts -t "foo/bar" -m "baz"
 ```
 
-Protocol Links:
+To make a release:
+
+```
+cd browser
+# update version in package.json
+npm install
+npm run build
+npm publish
+cd ..
+
+cd node
+# update version in package.json
+npm install
+npm run build
+npm publish
+cd ..
+
+git tag x.y.z
+git push --tags
+```
+
+## Protocol Links
 
 - 5.0: https://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.html
 - 3.1.1: https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html
