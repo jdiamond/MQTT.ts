@@ -9,7 +9,7 @@ MQTT.ts works in Deno, Node.js, and browsers. The imports for each platform are 
 The Deno build is accessible via this URL (cannot be used in Node.js or browsers).
 
 ```
-import { Client } from 'https://denopkg.com/jdiamond/MQTT.ts/mod.ts';
+import { Client } from 'https://deno.land/x/mqtt/deno/mod.ts';
 ```
 
 ### Node.js Imports
@@ -28,13 +28,11 @@ const { Client } = require('@jdiamond/mqtt');
 
 ### Browser Imports
 
-A browser build is hosted at unpkg.com:
+A browser build is published in a separate npm package and accessible via unpkg.com:
 
 ```
-import { Client } from 'https://unpkg.com/@jdiamond/mqtt';
+import { Client } from 'https://unpkg.com/@jdiamond/mqtt-browser';
 ```
-
-The browser build is also in the npm package.
 
 ## Client class
 

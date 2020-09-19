@@ -77,7 +77,7 @@ Example in [examples/browser](examples/browser).
 
 ## Development
 
-Requires Deno 1.0.0.
+First started working with Deno 1.0.0, but I only test with recent versions (most recently 1.4.1). Maybe I should set up some GitHub actions?
 
 To run the unit tests:
 
