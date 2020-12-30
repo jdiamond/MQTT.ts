@@ -33,7 +33,7 @@ export type AnyPacket =
 
 export type AnyPacketWithLength = AnyPacket & { length: number };
 
-export {
+export type {
   ConnectPacket,
   ConnackPacket,
   PublishPacket,
