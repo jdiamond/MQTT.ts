@@ -586,11 +586,11 @@ export abstract class Client {
 
   protected abstract validateURL(url: URL): void;
 
-  protected abstract async open(url: URL): Promise<void>;
+  protected abstract open(url: URL): Promise<void>;
 
-  protected abstract async write(bytes: Uint8Array): Promise<void>;
+  protected abstract write(bytes: Uint8Array): Promise<void>;
 
-  protected abstract async close(): Promise<void>;
+  protected abstract close(): Promise<void>;
 
   protected encode(packet: AnyPacket, utf8Encoder?: UTF8Encoder): Uint8Array {
     return encode(packet, utf8Encoder);
