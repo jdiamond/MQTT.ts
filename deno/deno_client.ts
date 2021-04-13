@@ -14,7 +14,7 @@ const utf8Encoder = new TextEncoder();
 const utf8Decoder = new TextDecoder();
 
 export class Client extends BaseClient {
-  options!: ClientOptions;
+  declare options: ClientOptions;
   private conn: Deno.Conn | undefined;
   private closing = false;
 
