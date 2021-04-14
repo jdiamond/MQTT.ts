@@ -12,7 +12,7 @@ const utf8Encoder = new TextEncoder();
 const utf8Decoder = new TextDecoder();
 
 export class TestClient extends BaseClient {
-  options!: TestClientOptions;
+  declare options: TestClientOptions;
   sentPackets: AnyPacket[] = [];
   receivedPackets: AnyPacket[] = [];
   timerCallbacks: { [key: string]: Function } = {};
@@ -117,7 +117,7 @@ export class TestClient extends BaseClient {
     this.timerCallbacks[name]();
   }
 
-  sleep(ms: number) {
+  sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(() => resolve(), ms));
   }
 }
