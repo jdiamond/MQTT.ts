@@ -9,5 +9,6 @@
         "modules": "cjs"
       }
     ]
-  ]
+  ],
+  "plugins": ["@babel/plugin-proposal-class-properties"]
 }
