@@ -1,6 +1,6 @@
 {
   "name": "@jdiamond/mqtt-browser",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "MQTT in TypeScript for browsers",
   "license": "MIT",
   "homepage": "https://github.com/jdiamond/MQTT.ts",
@@ -32,7 +32,8 @@
     "index.js",
     "index.min.js",
     "index.min.mjs",
-    "index.mjs"
+    "index.mjs",
+    "index.d.ts"
   ],
   "dependencies": {},
   "devDependencies": {
