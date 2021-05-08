@@ -1,0 +1,20 @@
+{
+  "name": "mqtt-example-snowpack",
+  "private": true,
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "snowpack dev",
+    "build": "snowpack build"
+  },
+  "keywords": [],
+  "author": "Jason Diamond",
+  "license": "ISC",
+  "dependencies": {
+    "@jdiamond/mqtt-browser": "^0.1.2"
+  },
+  "devDependencies": {
+    "snowpack": "^3.3.3"
+  }
+}

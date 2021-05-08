@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Snowpack Example</title>
+    <link rel="stylesheet" href="index.css">
+    <script src="index.js" type="module"></script>
+  </head>
+  <body>
+    <h1>Snowpack Example</h1>
+
+    <fieldset>
+      <label for="urlInput">Host</label>
+      <input id="urlInput" type="text" value="ws://localhost:9001" />
+      <button id="connectButton">Connect</button>
+      <button id="disconnectButton">Disconnect</button>
+      <span id="connectOutput"></span>
+    </fieldset>
+
+    <fieldset>
+      <label for="topicFilterInput">Topic Filter</label>
+      <input id="topicFilterInput" type="text" value="foo/#" />
+      <button id="subscribeButton">Subscribe</button>
+      <button id="unsubscribeButton">Unsubscribe</button>
+      <span id="subscribeOutput"></span>
+    </fieldset>
+
+    <fieldset>
+      <label for="topicInput">Topic</label>
+      <input id="topicInput" type="text" value="foo/bar" />
+      <label for="payloadInput">Payload</label>
+      <input id="payloadInput" type="text" value="baz" />
+      <label for="qosInput">QoS</label>
+      <input id="qosInput" type="number" value="1" />
+      <button id="publishButton">Publish</button>
+      <span id="publishOutput"></span>
+    </fieldset>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Topic</th>
+          <th>Payload</th>
+        </tr>
+      </thead>
+      <tbody id="messagesOutput"></tbody>
+    </table>
+  </body>
+</html>

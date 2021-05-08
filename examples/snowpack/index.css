@@ -1,0 +1,16 @@
+fieldset {
+  margin: 1em 0;
+  border: 1px solid lightgray;
+  padding: 1em;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  border: 1px solid lightgray;
+  padding: 1em;
+}
