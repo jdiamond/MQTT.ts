@@ -70,10 +70,14 @@ export class Client extends BaseClient {
 
           bytesRead = await conn.read(buffer);
         } catch (err) {
-          if (this.closing && err.name === 'BadResource') {
+          if (
+            this.closing &&
+            (err.name === 'BadResource' || err.name === 'Interrupted')
+          ) {
             // Not sure why this exception gets thrown after closing the
             // connection. See my issue at
-            // https://github.com/denoland/deno/issues/5194.
+            // https://github.com/denoland/deno/issues/5194. Also not sure when
+            // the error name changed from "BadResource" to "Interrupted".
           } else {
             this.log('caught error while reading', err);
 
