@@ -52,7 +52,7 @@ trap cleanup EXIT
 sleep 1
 
 printf "\nrunning publisher:\n\n"
-docker run -it --rm \
+docker run --rm \
   --net $NETWORK_NAME \
   -v $PWD:/mqtt.ts \
   -v $PWD/cache:/deno-dir \
