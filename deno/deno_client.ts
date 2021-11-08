@@ -5,8 +5,8 @@ import {
 import { AnyPacket } from '../packets/mod.ts';
 
 export type ClientOptions = BaseClientOptions & {
-  /** Path to the ca.crt file */
-  certFile?: string;
+  /** Path to the ca.crt files */
+  caCerts?: string[];
   /** Content of the client.crt file */
   certChain?: string;
   /** Content of the client.key file */
@@ -48,12 +48,10 @@ export class Client extends BaseClient {
         port: Number(url.port),
       });
     } else if (url.protocol === 'mqtts:') {
-      // console.log(this.options.certFile);
-
       conn = await Deno.connectTls({
         hostname: url.hostname,
         port: Number(url.port),
-        certFile: this.options.certFile,
+        caCerts: this.options.caCerts,
         certChain: this.options.certChain,
         privateKey: this.options.privateKey
       } as any);
