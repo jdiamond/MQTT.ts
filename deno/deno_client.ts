@@ -1,17 +1,8 @@
 import {
   Client as BaseClient,
-  ClientOptions as BaseClientOptions,
+  ClientOptions,
 } from '../client/base_client.ts';
 import { AnyPacket } from '../packets/mod.ts';
-
-export type ClientOptions = BaseClientOptions & {
-  /** Path to the ca.crt files */
-  caCerts?: string[];
-  /** Content of the client.crt file */
-  certChain?: string;
-  /** Content of the client.key file */
-  privateKey?: string;
-};
 
 const DEFAULT_BUF_SIZE = 4096;
 
@@ -19,7 +10,6 @@ const utf8Encoder = new TextEncoder();
 const utf8Decoder = new TextDecoder();
 
 export class Client extends BaseClient {
-  declare options: ClientOptions;
   private conn: Deno.Conn | undefined;
   private closing = false;
 
@@ -51,9 +41,9 @@ export class Client extends BaseClient {
       conn = await Deno.connectTls({
         hostname: url.hostname,
         port: Number(url.port),
-        caCerts: this.options.caCerts,
-        certChain: this.options.certChain,
-        privateKey: this.options.privateKey
+        caCerts: this.options?.caCerts,
+        certChain: this.options?.certChain,
+        privateKey: this.options?.privateKey
       } as any);
     } else {
       throw new Error(`unknown URL protocol ${url.protocol.slice(0, -1)}`);

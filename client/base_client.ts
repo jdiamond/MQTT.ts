@@ -34,6 +34,12 @@ export type ClientOptions = {
   incomingStore?: IncomingStore;
   outgoingStore?: OutgoingStore;
   logger?: (msg: string, ...args: unknown[]) => void;
+  /** Path to the ca.crt files */
+  caCerts?: string[];
+  /** Content of the client.crt file */
+  certChain?: string;
+  /** Content of the client.key file */
+  privateKey?: string;
 };
 
 export type RetryOptions = {
