@@ -34,6 +34,12 @@ export type ClientOptions = {
   incomingStore?: IncomingStore;
   outgoingStore?: OutgoingStore;
   logger?: (msg: string, ...args: unknown[]) => void;
+  /** Path to the ca.crt files */
+  caCerts?: string[];
+  /** Content of the client.crt file */
+  certChain?: string;
+  /** Content of the client.key file */
+  privateKey?: string;
 };
 
 export type RetryOptions = {
@@ -253,7 +259,10 @@ export abstract class Client {
   }
 
   public async connect(): Promise<ConnackPacket> {
+    await this.disconnect();
     switch (this.connectionState) {
+      case 'connecting':
+      case 'disconnecting':
       case 'offline':
       case 'disconnected':
         break;
@@ -364,6 +373,7 @@ export abstract class Client {
     input: SubscriptionOption | string | (SubscriptionOption | string)[],
     qos?: QoS
   ): Promise<Subscription[]> {
+    await this.connect();
     switch (this.connectionState) {
       case 'disconnecting':
       case 'disconnected':
@@ -565,6 +575,8 @@ export abstract class Client {
       case 'offline':
         this.changeState('disconnected');
         this.stopTimers();
+        break;
+      case 'disconnected':
         break;
       default:
         throw new Error(

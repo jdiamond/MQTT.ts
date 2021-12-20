@@ -1,12 +1,8 @@
 import {
   Client as BaseClient,
-  ClientOptions as BaseClientOptions,
+  ClientOptions,
 } from '../client/base_client.ts';
 import { AnyPacket } from '../packets/mod.ts';
-
-export type ClientOptions = BaseClientOptions & {
-  certFile?: string;
-};
 
 const DEFAULT_BUF_SIZE = 4096;
 
@@ -14,7 +10,6 @@ const utf8Encoder = new TextEncoder();
 const utf8Decoder = new TextDecoder();
 
 export class Client extends BaseClient {
-  declare options: ClientOptions;
   private conn: Deno.Conn | undefined;
   private closing = false;
 
@@ -43,13 +38,13 @@ export class Client extends BaseClient {
         port: Number(url.port),
       });
     } else if (url.protocol === 'mqtts:') {
-      // console.log(this.options.certFile);
-
       conn = await Deno.connectTls({
         hostname: url.hostname,
         port: Number(url.port),
-        certFile: this.options.certFile,
-      });
+        caCerts: this.options?.caCerts,
+        certChain: this.options?.certChain,
+        privateKey: this.options?.privateKey
+      } as any);
     } else {
       throw new Error(`unknown URL protocol ${url.protocol.slice(0, -1)}`);
     }
