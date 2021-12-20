@@ -259,7 +259,10 @@ export abstract class Client {
   }
 
   public async connect(): Promise<ConnackPacket> {
+    await this.disconnect();
     switch (this.connectionState) {
+      case 'connecting':
+      case 'disconnecting':
       case 'offline':
       case 'disconnected':
         break;
@@ -370,6 +373,7 @@ export abstract class Client {
     input: SubscriptionOption | string | (SubscriptionOption | string)[],
     qos?: QoS
   ): Promise<Subscription[]> {
+    await this.connect();
     switch (this.connectionState) {
       case 'disconnecting':
       case 'disconnected':
@@ -571,6 +575,8 @@ export abstract class Client {
       case 'offline':
         this.changeState('disconnected');
         this.stopTimers();
+        break;
+      case 'disconnected':
         break;
       default:
         throw new Error(
