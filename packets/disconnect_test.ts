@@ -3,9 +3,12 @@ import { decode, encode } from "./mod.ts";
 
 Deno.test("encodeDisconnectPacket", function encodeDisconnectPacket() {
   assertEquals(
-    encode({
-      type: "disconnect",
-    }),
+    encode(
+      {
+        type: "disconnect",
+      },
+      new TextEncoder(),
+    ),
     [
       // fixedHeader
       224, // packetType + flags
@@ -22,6 +25,7 @@ Deno.test("decodeDisconnectPacket", function decodeDisconnectPacket() {
         224, // packetType + flags
         0, // remainingLength
       ]),
+      new TextDecoder(),
     ),
     {
       type: "disconnect",

@@ -85,9 +85,9 @@ const packetTypesById = [
   disconnect, // 14
 ];
 
-export function encode(
-  packet: AnyPacket,
-  utf8Encoder?: UTF8Encoder,
+export function encode<T extends AnyPacket>(
+  packet: T,
+  utf8Encoder: UTF8Encoder,
 ): Uint8Array {
   const name = packet.type;
   // deno-lint-ignore no-explicit-any
@@ -102,7 +102,7 @@ export function encode(
 
 export function decode(
   buffer: Uint8Array,
-  utf8Decoder?: UTF8Decoder,
+  utf8Decoder: UTF8Decoder,
 ): AnyPacketWithLength | null {
   if (buffer.length < 2) {
     return null;

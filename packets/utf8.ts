@@ -2,7 +2,7 @@
 // Node.js does not so we have to use an abstraction for working with UTF8.
 
 export interface UTF8Encoder {
-  encode: (str: string) => Uint8Array;
+  encode: (str?: string | undefined) => Uint8Array;
 }
 
 export interface UTF8Decoder {
@@ -18,7 +18,7 @@ export function encodeUTF8String(str: string, encoder: UTF8Encoder) {
 export function decodeUTF8String(
   buffer: Uint8Array,
   startIndex: number,
-  utf8Decoder: UTF8Decoder,
+  utf8Decoder: UTF8Decoder
 ) {
   const length = (buffer[startIndex] << 8) + buffer[startIndex + 1];
   const bytes = buffer.slice(startIndex + 2, startIndex + 2 + length);

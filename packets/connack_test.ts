@@ -3,11 +3,14 @@ import { decode, encode } from "./mod.ts";
 
 Deno.test("encodeConnackPacket", function encodeConnackPacket() {
   assertEquals(
-    encode({
-      type: "connack",
-      sessionPresent: false,
-      returnCode: 0,
-    }),
+    encode(
+      {
+        type: "connack",
+        sessionPresent: false,
+        returnCode: 0,
+      },
+      new TextEncoder(),
+    ),
     [
       // fixedHeader
       32, // packetType + flags
@@ -30,6 +33,7 @@ Deno.test("decodeConnackPacket", function decodeConnackPacket() {
         0, // connack flags
         0, // return code
       ]),
+      new TextDecoder(),
     ),
     {
       type: "connack",
@@ -44,11 +48,14 @@ Deno.test(
   "enodeConnackPacketWithSessionPresent",
   function decodeConnackPacketWithSessionPresent() {
     assertEquals(
-      encode({
-        type: "connack",
-        sessionPresent: true,
-        returnCode: 0,
-      }),
+      encode(
+        {
+          type: "connack",
+          sessionPresent: true,
+          returnCode: 0,
+        },
+        new TextEncoder(),
+      ),
       [
         // fixedHeader
         32, // packetType + flags
@@ -74,6 +81,7 @@ Deno.test(
           1, // connack flags (sessionPresent)
           0, // return code
         ]),
+        new TextDecoder(),
       ),
       {
         type: "connack",
@@ -98,6 +106,7 @@ Deno.test(
           0, // connack flags
           4, // return code (bad username or password)
         ]),
+        new TextDecoder(),
       ),
       {
         type: "connack",
@@ -110,7 +119,7 @@ Deno.test(
 );
 
 Deno.test("decodeShortConnackPackets", function decodeShortConnackPackets() {
-  assertEquals(decode(Uint8Array.from([32])), null);
-  assertEquals(decode(Uint8Array.from([32, 2])), null);
-  assertEquals(decode(Uint8Array.from([32, 2, 0])), null);
+  assertEquals(decode(Uint8Array.from([32]), new TextDecoder()), null);
+  assertEquals(decode(Uint8Array.from([32, 2]), new TextDecoder()), null);
+  assertEquals(decode(Uint8Array.from([32, 2, 0]), new TextDecoder()), null);
 });

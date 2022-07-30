@@ -2,7 +2,6 @@ import {
   Client as BaseClient,
   ClientOptions as BaseClientOptions,
 } from "../client/base_client.ts";
-import { AnyPacket } from "../packets/mod.ts";
 
 // This client doesn't have any extra options.
 export type ClientOptions = BaseClientOptions;
@@ -26,6 +25,14 @@ export class Client extends BaseClient {
 
   constructor(options?: ClientOptions) {
     super(options);
+  }
+
+  getUTF8Encoder() {
+    return utf8Encoder;
+  }
+
+  getUTF8Decoder() {
+    return utf8Decoder;
   }
 
   protected getDefaultURL() {
@@ -109,13 +116,5 @@ export class Client extends BaseClient {
     this.ws.close();
 
     return Promise.resolve();
-  }
-
-  protected encode(packet: AnyPacket) {
-    return super.encode(packet, utf8Encoder);
-  }
-
-  protected decode(bytes: Uint8Array) {
-    return super.decode(bytes, utf8Decoder);
   }
 }

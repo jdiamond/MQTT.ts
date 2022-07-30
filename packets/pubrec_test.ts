@@ -3,10 +3,13 @@ import { decode, encode } from "./mod.ts";
 
 Deno.test("encodePubrecPacket", function encodePubrecPacket() {
   assertEquals(
-    encode({
-      type: "pubrec",
-      id: 1337,
-    }),
+    encode(
+      {
+        type: "pubrec",
+        id: 1337,
+      },
+      new TextEncoder(),
+    ),
     [
       // fixedHeader
       0x50, // packetType + flags
@@ -29,6 +32,7 @@ Deno.test("decodePubrecPacket", function decodePubrecPacket() {
         5, // id MSB
         57, // id LSB
       ]),
+      new TextDecoder(),
     ),
     {
       type: "pubrec",
@@ -39,7 +43,7 @@ Deno.test("decodePubrecPacket", function decodePubrecPacket() {
 });
 
 Deno.test("decodeShortPubrecPackets", function decodeShortPubrecPackets() {
-  assertEquals(decode(Uint8Array.from([0x50])), null);
-  assertEquals(decode(Uint8Array.from([0x50, 2])), null);
-  assertEquals(decode(Uint8Array.from([0x50, 2, 5])), null);
+  assertEquals(decode(Uint8Array.from([0x50]), new TextDecoder()), null);
+  assertEquals(decode(Uint8Array.from([0x50, 2]), new TextDecoder()), null);
+  assertEquals(decode(Uint8Array.from([0x50, 2, 5]), new TextDecoder()), null);
 });

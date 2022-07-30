@@ -3,9 +3,12 @@ import { decode, encode } from "./mod.ts";
 
 Deno.test("encodePingreqPacket", function encodePingreqPacket() {
   assertEquals(
-    encode({
-      type: "pingreq",
-    }),
+    encode(
+      {
+        type: "pingreq",
+      },
+      new TextEncoder(),
+    ),
     [
       // fixedHeader
       0xc0, // packetType + flags
@@ -22,6 +25,7 @@ Deno.test("decodePingreqPacket", function decodePingreqPacket() {
         0xc0, // packetType + flags
         0, // remainingLength
       ]),
+      new TextDecoder(),
     ),
     {
       type: "pingreq",
@@ -31,5 +35,5 @@ Deno.test("decodePingreqPacket", function decodePingreqPacket() {
 });
 
 Deno.test("decodeShortPingrecPackets", function decodeShortPingrecPackets() {
-  assertEquals(decode(Uint8Array.from([0xc0])), null);
+  assertEquals(decode(Uint8Array.from([0xc0]), new TextDecoder()), null);
 });

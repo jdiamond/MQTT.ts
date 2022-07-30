@@ -3,10 +3,13 @@ import { decode, encode } from "./mod.ts";
 
 Deno.test("encodePubackPacket", function encodePubackPacket() {
   assertEquals(
-    encode({
-      type: "puback",
-      id: 1337,
-    }),
+    encode(
+      {
+        type: "puback",
+        id: 1337,
+      },
+      new TextEncoder(),
+    ),
     [
       // fixedHeader
       0x40, // packetType + flags
@@ -29,6 +32,7 @@ Deno.test("decodePubackPacket", function decodePubackPacket() {
         5, // id MSB
         57, // id LSB
       ]),
+      new TextDecoder(),
     ),
     {
       type: "puback",
@@ -39,7 +43,7 @@ Deno.test("decodePubackPacket", function decodePubackPacket() {
 });
 
 Deno.test("decodeShortPubackPackets", function decodeShortPubackPackets() {
-  assertEquals(decode(Uint8Array.from([0x40])), null);
-  assertEquals(decode(Uint8Array.from([0x40, 2])), null);
-  assertEquals(decode(Uint8Array.from([0x40, 2, 5])), null);
+  assertEquals(decode(Uint8Array.from([0x40]), new TextDecoder()), null);
+  assertEquals(decode(Uint8Array.from([0x40, 2]), new TextDecoder()), null);
+  assertEquals(decode(Uint8Array.from([0x40, 2, 5]), new TextDecoder()), null);
 });

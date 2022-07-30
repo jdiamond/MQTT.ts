@@ -25,6 +25,14 @@ export class TestClient extends BaseClient {
     });
   }
 
+  getUTF8Encoder() {
+    return utf8Encoder;
+  }
+
+  getUTF8Decoder() {
+    return utf8Decoder;
+  }
+
   // These methods must be overridden by BaseClient subclasses:
   protected getDefaultURL() {
     return "mqtt://localhost";
@@ -57,14 +65,6 @@ export class TestClient extends BaseClient {
     this.connectionClosed();
 
     return Promise.resolve();
-  }
-
-  protected encode(packet: AnyPacket) {
-    return super.encode(packet, utf8Encoder);
-  }
-
-  protected decode(bytes: Uint8Array) {
-    return super.decode(bytes, utf8Decoder);
   }
 
   // Receive packet from a test.

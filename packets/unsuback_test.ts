@@ -3,10 +3,13 @@ import { decode, encode } from "./mod.ts";
 
 Deno.test("encodeUnsubackPacket", function encodeUnsubackPacket() {
   assertEquals(
-    encode({
-      type: "unsuback",
-      id: 1,
-    }),
+    encode(
+      {
+        type: "unsuback",
+        id: 1,
+      },
+      new TextEncoder(),
+    ),
     [
       // fixedHeader
       0xb0, // packetType + flags
@@ -29,6 +32,7 @@ Deno.test("decodeUnsubackPacket", function decodeUnsubackPacket() {
         0, // id MSB
         1, // id LSB
       ]),
+      new TextDecoder(),
     ),
     {
       type: "unsuback",
