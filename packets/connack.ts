@@ -1,5 +1,5 @@
 export interface ConnackPacket {
-  type: 'connack';
+  type: "connack";
   sessionPresent: boolean;
   returnCode: number;
 }
@@ -20,13 +20,13 @@ export default {
   decode(
     buffer: Uint8Array,
     _remainingStart: number,
-    _remainingLength: number
+    _remainingLength: number,
   ): ConnackPacket {
     const sessionPresent = !!(buffer[2] & 1);
     const returnCode = buffer[3];
 
     return {
-      type: 'connack',
+      type: "connack",
       sessionPresent,
       returnCode,
     };

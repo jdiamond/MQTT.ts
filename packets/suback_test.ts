@@ -1,10 +1,10 @@
-import { assertEquals } from 'https://deno.land/std@0.70.0/testing/asserts.ts';
-import { encode, decode } from './mod.ts';
+import { assertEquals } from "https://deno.land/std@0.70.0/testing/asserts.ts";
+import { decode, encode } from "./mod.ts";
 
-Deno.test('encodeSubackPacket', function decodeSubackPacket() {
+Deno.test("encodeSubackPacket", function decodeSubackPacket() {
   assertEquals(
     encode({
-      type: 'suback',
+      type: "suback",
       id: 1,
       returnCodes: [0, 1],
     }),
@@ -18,11 +18,11 @@ Deno.test('encodeSubackPacket', function decodeSubackPacket() {
       // payload
       0,
       1,
-    ]
+    ],
   );
 });
 
-Deno.test('decodeSubackPacket', function decodeSubackPacket() {
+Deno.test("decodeSubackPacket", function decodeSubackPacket() {
   assertEquals(
     decode(
       Uint8Array.from([
@@ -35,13 +35,13 @@ Deno.test('decodeSubackPacket', function decodeSubackPacket() {
         // payload
         0,
         1,
-      ])
+      ]),
     ),
     {
-      type: 'suback',
+      type: "suback",
       id: 1,
       returnCodes: [0, 1],
       length: 6,
-    }
+    },
   );
 });

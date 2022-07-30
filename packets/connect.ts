@@ -1,9 +1,9 @@
 import { encodeLength } from "./length.ts";
 import {
-  UTF8Encoder,
-  UTF8Decoder,
-  encodeUTF8String,
   decodeUTF8String,
+  encodeUTF8String,
+  UTF8Decoder,
+  UTF8Encoder,
 } from "./utf8.ts";
 
 export interface ConnectPacket {
@@ -35,8 +35,7 @@ export default {
     const willQoS = (packet.will && packet.will.qos) || 0;
     const willFlag = !!packet.will;
     const cleanSession = packet.clean || typeof packet.clean === "undefined";
-    const connectFlags =
-      (usernameFlag ? 128 : 0) +
+    const connectFlags = (usernameFlag ? 128 : 0) +
       (passwordFlag ? 64 : 0) +
       (willRetain ? 32 : 0) +
       (willQoS & 2 ? 16 : 0) +
@@ -79,13 +78,13 @@ export default {
     buffer: Uint8Array,
     remainingStart: number,
     _remainingLength: number,
-    utf8Decoder: UTF8Decoder
+    utf8Decoder: UTF8Decoder,
   ): ConnectPacket {
     const protocolNameStart = remainingStart;
     const protocolName = decodeUTF8String(
       buffer,
       protocolNameStart,
-      utf8Decoder
+      utf8Decoder,
     );
 
     const protocolLevelIndex = protocolNameStart + protocolName.length;
@@ -105,8 +104,8 @@ export default {
     }
 
     const keepAliveIndex = connectFlagsIndex + 1;
-    const keepAlive =
-      (buffer[keepAliveIndex] << 8) + buffer[keepAliveIndex + 1];
+    const keepAlive = (buffer[keepAliveIndex] << 8) +
+      buffer[keepAliveIndex + 1];
 
     const clientIdStart = keepAliveIndex + 2;
     const clientId = decodeUTF8String(buffer, clientIdStart, utf8Decoder);
@@ -134,9 +133,9 @@ export default {
       password: password ? password.value : undefined,
       will: willFlag
         ? {
-            retain: willRetain,
-            qos: willQoS,
-          }
+          retain: willRetain,
+          qos: willQoS,
+        }
         : undefined,
       clean: cleanSession,
       keepAlive,

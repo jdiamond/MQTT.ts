@@ -1,18 +1,18 @@
-import { assertEquals } from 'https://deno.land/std@0.70.0/testing/asserts.ts';
-import { encode, decode } from './mod.ts';
+import { assertEquals } from "https://deno.land/std@0.70.0/testing/asserts.ts";
+import { decode, encode } from "./mod.ts";
 
-Deno.test('encodeSubscribePacket', function encodeSubscribePacket() {
+Deno.test("encodeSubscribePacket", function encodeSubscribePacket() {
   assertEquals(
     encode(
       {
-        type: 'subscribe',
+        type: "subscribe",
         id: 1,
         subscriptions: [
-          { topicFilter: 'a/b', qos: 0 },
-          { topicFilter: 'c/d', qos: 1 },
+          { topicFilter: "a/b", qos: 0 },
+          { topicFilter: "c/d", qos: 1 },
         ],
       },
-      new TextEncoder()
+      new TextEncoder(),
     ),
     [
       // fixedHeader
@@ -34,11 +34,11 @@ Deno.test('encodeSubscribePacket', function encodeSubscribePacket() {
       47, // '/'
       100, // 'd'
       1, // qos
-    ]
+    ],
   );
 });
 
-Deno.test('decodeSubscribePacket', function decodeSubscribePacket() {
+Deno.test("decodeSubscribePacket", function decodeSubscribePacket() {
   assertEquals(
     decode(
       Uint8Array.from([
@@ -62,16 +62,16 @@ Deno.test('decodeSubscribePacket', function decodeSubscribePacket() {
         100, // 'd'
         1, // qos
       ]),
-      new TextDecoder()
+      new TextDecoder(),
     ),
     {
-      type: 'subscribe',
+      type: "subscribe",
       id: 1,
       subscriptions: [
-        { topicFilter: 'a/b', qos: 0 },
-        { topicFilter: 'c/d', qos: 1 },
+        { topicFilter: "a/b", qos: 0 },
+        { topicFilter: "c/d", qos: 1 },
       ],
       length: 16,
-    }
+    },
   );
 });

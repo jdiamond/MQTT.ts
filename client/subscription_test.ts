@@ -1,31 +1,31 @@
-import { assertEquals } from 'https://deno.land/std@0.70.0/testing/asserts.ts';
-import { TestClient } from './test_client.ts';
-import { SubscribePacket, UnsubscribePacket } from '../packets/mod.ts';
+import { assertEquals } from "https://deno.land/std@0.70.0/testing/asserts.ts";
+import { TestClient } from "./test_client.ts";
+import { SubscribePacket, UnsubscribePacket } from "../packets/mod.ts";
 
-Deno.test('subscribe and unsubscribe called while connected', async () => {
+Deno.test("subscribe and unsubscribe called while connected", async () => {
   const client = new TestClient();
 
   client.connect();
 
   // Client immediately transitions to connecting state.
-  assertEquals(client.connectionState, 'connecting');
+  assertEquals(client.connectionState, "connecting");
 
   // Sleep a little to allow the connect packet to be sent.
   await client.sleep(1);
 
   assertEquals(client.sentPackets.length, 1);
-  assertEquals(client.sentPackets[0].type, 'connect');
-  assertEquals(client.connectionState, 'connecting');
+  assertEquals(client.sentPackets[0].type, "connect");
+  assertEquals(client.connectionState, "connecting");
 
   client.testReceivePacket({
-    type: 'connack',
+    type: "connack",
     returnCode: 0,
     sessionPresent: false,
   });
 
-  assertEquals(client.connectionState, 'connected');
+  assertEquals(client.connectionState, "connected");
 
-  const subscribe1Promise = client.subscribe('topic1');
+  const subscribe1Promise = client.subscribe("topic1");
 
   let subscribe1Resolved = false;
 
@@ -35,24 +35,24 @@ Deno.test('subscribe and unsubscribe called while connected', async () => {
 
   // Subscription is initially in the pending state.
   assertEquals(client.subscriptions, [
-    { topicFilter: 'topic1', qos: 0, state: 'pending' },
+    { topicFilter: "topic1", qos: 0, state: "pending" },
   ]);
 
   // Sleep so the subscribe packet can be sent.
   await client.sleep(1);
 
   assertEquals(client.sentPackets.length, 2);
-  assertEquals(client.sentPackets[1].type, 'subscribe');
+  assertEquals(client.sentPackets[1].type, "subscribe");
 
   const subscribePacket = client.sentPackets[1] as SubscribePacket;
 
   // The subscription state is now unacknowledged.
   assertEquals(client.subscriptions, [
-    { topicFilter: 'topic1', qos: 0, state: 'unacknowledged' },
+    { topicFilter: "topic1", qos: 0, state: "unacknowledged" },
   ]);
 
   client.testReceivePacket({
-    type: 'suback',
+    type: "suback",
     id: subscribePacket.id,
     returnCodes: [0],
   });
@@ -64,15 +64,15 @@ Deno.test('subscribe and unsubscribe called while connected', async () => {
   const subscribe1Result = await subscribe1Promise;
 
   assertEquals(subscribe1Result, [
-    { topicFilter: 'topic1', qos: 0, state: 'acknowledged', returnCode: 0 },
+    { topicFilter: "topic1", qos: 0, state: "acknowledged", returnCode: 0 },
   ]);
 
   // The subscription state is now acknowledged.
   assertEquals(client.subscriptions, [
-    { topicFilter: 'topic1', qos: 0, state: 'acknowledged', returnCode: 0 },
+    { topicFilter: "topic1", qos: 0, state: "acknowledged", returnCode: 0 },
   ]);
 
-  const unsubscribe1Promise = client.unsubscribe('topic1');
+  const unsubscribe1Promise = client.unsubscribe("topic1");
 
   let unsubscribe1Resolved = false;
 
@@ -83,9 +83,9 @@ Deno.test('subscribe and unsubscribe called while connected', async () => {
   // The subscription state is now unsubscribe-pending.
   assertEquals(client.subscriptions, [
     {
-      topicFilter: 'topic1',
+      topicFilter: "topic1",
       qos: 0,
-      state: 'unsubscribe-pending',
+      state: "unsubscribe-pending",
       returnCode: 0,
     },
   ]);
@@ -94,21 +94,21 @@ Deno.test('subscribe and unsubscribe called while connected', async () => {
   await client.sleep(1);
 
   assertEquals(client.sentPackets.length, 3);
-  assertEquals(client.sentPackets[2].type, 'unsubscribe');
+  assertEquals(client.sentPackets[2].type, "unsubscribe");
 
   const unsubscribePacket = client.sentPackets[2] as UnsubscribePacket;
 
   // The subscription state is now unsubscribe-unacknowledged.
   assertEquals(client.subscriptions, [
     {
-      topicFilter: 'topic1',
+      topicFilter: "topic1",
       qos: 0,
-      state: 'unsubscribe-unacknowledged',
+      state: "unsubscribe-unacknowledged",
       returnCode: 0,
     },
   ]);
 
-  client.testReceivePacket({ type: 'unsuback', id: unsubscribePacket.id });
+  client.testReceivePacket({ type: "unsuback", id: unsubscribePacket.id });
 
   // There are now no subscriptions.
   assertEquals(client.subscriptions, []);
@@ -124,84 +124,84 @@ Deno.test('subscribe and unsubscribe called while connected', async () => {
 
   assertEquals(unsubscribe1Result, [
     {
-      topicFilter: 'topic1',
+      topicFilter: "topic1",
       qos: 0,
-      state: 'unsubscribe-acknowledged',
+      state: "unsubscribe-acknowledged",
       returnCode: 0,
     },
   ]);
 });
 
-Deno.test('subscribe called while connecting', async () => {
+Deno.test("subscribe called while connecting", async () => {
   const client = new TestClient();
 
   client.connect();
 
   // Client immediately transitions to connecting state.
-  assertEquals(client.connectionState, 'connecting');
+  assertEquals(client.connectionState, "connecting");
 
   // Can still subscribe.
-  client.subscribe('topic1');
+  client.subscribe("topic1");
 
   // Client is still in connecting state.
-  assertEquals(client.connectionState, 'connecting');
+  assertEquals(client.connectionState, "connecting");
 
   // Subscribe packet cannot be sent until connected so subscription state is pending.
   assertEquals(client.subscriptions, [
-    { topicFilter: 'topic1', qos: 0, state: 'pending' },
+    { topicFilter: "topic1", qos: 0, state: "pending" },
   ]);
 
   // Sleep a little to allow the connect packet to be sent.
   await client.sleep(1);
 
   assertEquals(client.sentPackets.length, 1);
-  assertEquals(client.sentPackets[0].type, 'connect');
-  assertEquals(client.connectionState, 'connecting');
+  assertEquals(client.sentPackets[0].type, "connect");
+  assertEquals(client.connectionState, "connecting");
 
   client.testReceivePacket({
-    type: 'connack',
+    type: "connack",
     returnCode: 0,
     sessionPresent: false,
   });
 
-  assertEquals(client.connectionState, 'connected');
+  assertEquals(client.connectionState, "connected");
 
   // Sleep so the subscribe packet can be sent.
   await client.sleep(1);
 
   assertEquals(client.sentPackets.length, 2);
-  assertEquals(client.sentPackets[1].type, 'subscribe');
+  assertEquals(client.sentPackets[1].type, "subscribe");
 
   // The subscription state is now unacknowledged.
   assertEquals(client.subscriptions, [
-    { topicFilter: 'topic1', qos: 0, state: 'unacknowledged' },
+    { topicFilter: "topic1", qos: 0, state: "unacknowledged" },
   ]);
 });
 
-Deno.test('subscribe and unsubscribe called while connecting', async () => {
+Deno.test("subscribe and unsubscribe called while connecting", async () => {
   const client = new TestClient();
 
   client.connect();
 
   // Client immediately transitions to connecting state.
-  assertEquals(client.connectionState, 'connecting');
+  assertEquals(client.connectionState, "connecting");
 
   // Can still subscribe.
-  const subscribe1Promise = client.subscribe('topic1');
+  const subscribe1Promise = client.subscribe("topic1");
 
   // Client is still in connecting state.
-  assertEquals(client.connectionState, 'connecting');
+  assertEquals(client.connectionState, "connecting");
 
   // Subscribe packet cannot be sent until connected so subscription state is pending.
   assertEquals(client.subscriptions, [
-    { topicFilter: 'topic1', qos: 0, state: 'pending' },
+    { topicFilter: "topic1", qos: 0, state: "pending" },
   ]);
 
   // Can call unsubscribe while still connecting.
-  const unsubscribe1Promise = client.unsubscribe('topic1');
+  const unsubscribe1Promise = client.unsubscribe("topic1");
 
   // Client is still in connecting state.
-  assertEquals(client.connectionState, 'connecting');
+  assertEquals(client.connectionState, "connecting");
 
   // Pending subscription is gone.
   assertEquals(client.subscriptions, []);
@@ -212,188 +212,188 @@ Deno.test('subscribe and unsubscribe called while connecting', async () => {
 
   // Subscription state is removed because subscribe packet was never sent.
   assertEquals(subscribe1Result, [
-    { topicFilter: 'topic1', qos: 0, state: 'removed' },
+    { topicFilter: "topic1", qos: 0, state: "removed" },
   ]);
   assertEquals(unsubscribe1Result, subscribe1Result);
 });
 
-Deno.test('reconnecting resubscribes', async () => {
+Deno.test("reconnecting resubscribes", async () => {
   const client = new TestClient();
 
   client.connect();
 
-  assertEquals(client.connectionState, 'connecting');
+  assertEquals(client.connectionState, "connecting");
 
   // Sleep a little to allow the connect packet to be sent.
   await client.sleep(1);
 
-  assertEquals(client.sentPackets[0].type, 'connect');
-  assertEquals(client.connectionState, 'connecting');
+  assertEquals(client.sentPackets[0].type, "connect");
+  assertEquals(client.connectionState, "connecting");
 
   client.testReceivePacket({
-    type: 'connack',
+    type: "connack",
     returnCode: 0,
     sessionPresent: false,
   });
 
-  assertEquals(client.connectionState, 'connected');
+  assertEquals(client.connectionState, "connected");
 
-  const subscribe1Promise = client.subscribe('topic1');
+  const subscribe1Promise = client.subscribe("topic1");
 
   assertEquals(client.subscriptions, [
-    { topicFilter: 'topic1', qos: 0, state: 'pending' },
+    { topicFilter: "topic1", qos: 0, state: "pending" },
   ]);
 
   // Sleep a little to allow the subscribe packet to be sent.
   await client.sleep(1);
 
   assertEquals(client.subscriptions, [
-    { topicFilter: 'topic1', qos: 0, state: 'unacknowledged' },
+    { topicFilter: "topic1", qos: 0, state: "unacknowledged" },
   ]);
 
   const subscribe1Packet = client.sentPackets[1] as SubscribePacket;
 
-  assertEquals(subscribe1Packet.type, 'subscribe');
+  assertEquals(subscribe1Packet.type, "subscribe");
   assertEquals(subscribe1Packet.subscriptions, [
-    { topicFilter: 'topic1', qos: 0 },
+    { topicFilter: "topic1", qos: 0 },
   ]);
 
   client.testReceivePacket({
-    type: 'suback',
+    type: "suback",
     id: subscribe1Packet.id,
     returnCodes: [0],
   });
 
   assertEquals(client.subscriptions, [
-    { topicFilter: 'topic1', qos: 0, state: 'acknowledged', returnCode: 0 },
+    { topicFilter: "topic1", qos: 0, state: "acknowledged", returnCode: 0 },
   ]);
 
   const subscribe1Result = await subscribe1Promise;
 
   assertEquals(subscribe1Result, [
-    { topicFilter: 'topic1', qos: 0, state: 'acknowledged', returnCode: 0 },
+    { topicFilter: "topic1", qos: 0, state: "acknowledged", returnCode: 0 },
   ]);
 
   // Break the connection so we can test resubscribing.
   client.testCloseConnection();
 
-  assertEquals(client.connectionState, 'offline');
+  assertEquals(client.connectionState, "offline");
 
-  client.testTriggerTimer('reconnect');
+  client.testTriggerTimer("reconnect");
 
-  assertEquals(client.connectionState, 'connecting');
+  assertEquals(client.connectionState, "connecting");
 
   // Sleep a little to allow the connect packet to be sent.
   await client.sleep(1);
 
-  assertEquals(client.sentPackets[2].type, 'connect');
-  assertEquals(client.connectionState, 'connecting');
+  assertEquals(client.sentPackets[2].type, "connect");
+  assertEquals(client.connectionState, "connecting");
 
   client.testReceivePacket({
-    type: 'connack',
+    type: "connack",
     returnCode: 0,
     sessionPresent: false,
   });
 
-  assertEquals(client.connectionState, 'connected');
+  assertEquals(client.connectionState, "connected");
 
   // Sleep a little to allow the subscribe packet to be sent.
   await client.sleep(1);
 
-  assertEquals(client.sentPackets[3].type, 'subscribe');
+  assertEquals(client.sentPackets[3].type, "subscribe");
   assertEquals((client.sentPackets[3] as SubscribePacket).subscriptions, [
-    { topicFilter: 'topic1', qos: 0 },
+    { topicFilter: "topic1", qos: 0 },
   ]);
 });
 
 Deno.test(
-  'reconnecting does not resubscribe when not clean and session present',
+  "reconnecting does not resubscribe when not clean and session present",
   async () => {
     const client = new TestClient({ clean: false });
 
     client.connect();
 
-    assertEquals(client.connectionState, 'connecting');
+    assertEquals(client.connectionState, "connecting");
 
     // Sleep a little to allow the connect packet to be sent.
     await client.sleep(1);
 
     assertEquals(client.sentPackets.length, 1);
-    assertEquals(client.sentPackets[0].type, 'connect');
-    assertEquals(client.connectionState, 'connecting');
+    assertEquals(client.sentPackets[0].type, "connect");
+    assertEquals(client.connectionState, "connecting");
 
     client.testReceivePacket({
-      type: 'connack',
+      type: "connack",
       returnCode: 0,
       sessionPresent: false,
     });
 
-    assertEquals(client.connectionState, 'connected');
+    assertEquals(client.connectionState, "connected");
 
-    const subscribe1Promise = client.subscribe('topic1');
+    const subscribe1Promise = client.subscribe("topic1");
 
     assertEquals(client.subscriptions, [
-      { topicFilter: 'topic1', qos: 0, state: 'pending' },
+      { topicFilter: "topic1", qos: 0, state: "pending" },
     ]);
 
     // Sleep a little to allow the subscribe packet to be sent.
     await client.sleep(1);
 
     assertEquals(client.subscriptions, [
-      { topicFilter: 'topic1', qos: 0, state: 'unacknowledged' },
+      { topicFilter: "topic1", qos: 0, state: "unacknowledged" },
     ]);
 
     assertEquals(client.sentPackets.length, 2);
     const subscribe1Packet = client.sentPackets[1] as SubscribePacket;
 
-    assertEquals(subscribe1Packet.type, 'subscribe');
+    assertEquals(subscribe1Packet.type, "subscribe");
     assertEquals(subscribe1Packet.subscriptions, [
-      { topicFilter: 'topic1', qos: 0 },
+      { topicFilter: "topic1", qos: 0 },
     ]);
 
     client.testReceivePacket({
-      type: 'suback',
+      type: "suback",
       id: subscribe1Packet.id,
       returnCodes: [0],
     });
 
     assertEquals(client.subscriptions, [
-      { topicFilter: 'topic1', qos: 0, state: 'acknowledged', returnCode: 0 },
+      { topicFilter: "topic1", qos: 0, state: "acknowledged", returnCode: 0 },
     ]);
 
     const subscribe1Result = await subscribe1Promise;
 
     assertEquals(subscribe1Result, [
-      { topicFilter: 'topic1', qos: 0, state: 'acknowledged', returnCode: 0 },
+      { topicFilter: "topic1", qos: 0, state: "acknowledged", returnCode: 0 },
     ]);
 
     // Break the connection so we can test resubscribing.
     client.testCloseConnection();
 
-    assertEquals(client.connectionState, 'offline');
+    assertEquals(client.connectionState, "offline");
 
-    client.testTriggerTimer('reconnect');
+    client.testTriggerTimer("reconnect");
 
-    assertEquals(client.connectionState, 'connecting');
+    assertEquals(client.connectionState, "connecting");
 
     // Sleep a little to allow the connect packet to be sent.
     await client.sleep(1);
 
     assertEquals(client.sentPackets.length, 3);
-    assertEquals(client.sentPackets[2].type, 'connect');
-    assertEquals(client.connectionState, 'connecting');
+    assertEquals(client.sentPackets[2].type, "connect");
+    assertEquals(client.connectionState, "connecting");
 
     client.testReceivePacket({
-      type: 'connack',
+      type: "connack",
       returnCode: 0,
       sessionPresent: true,
     });
 
-    assertEquals(client.connectionState, 'connected');
+    assertEquals(client.connectionState, "connected");
 
     // Session is present so subscription state stays the same.
     assertEquals(client.subscriptions, [
-      { topicFilter: 'topic1', qos: 0, state: 'acknowledged', returnCode: 0 },
+      { topicFilter: "topic1", qos: 0, state: "acknowledged", returnCode: 0 },
     ]);
 
     // Sleep a little to allow the subscribe packet to be sent.
@@ -401,158 +401,158 @@ Deno.test(
 
     // But it doesn't get sent.
     assertEquals(client.sentPackets.length, 3);
-  }
+  },
 );
 
 Deno.test(
-  'unsubscribing while offline immediately removes a subscription from clean clients',
+  "unsubscribing while offline immediately removes a subscription from clean clients",
   async () => {
     const client = new TestClient({ clean: true });
 
     client.connect();
 
-    assertEquals(client.connectionState, 'connecting');
+    assertEquals(client.connectionState, "connecting");
 
     // Sleep a little to allow the connect packet to be sent.
     await client.sleep(1);
 
     assertEquals(client.sentPackets.length, 1);
-    assertEquals(client.sentPackets[0].type, 'connect');
-    assertEquals(client.connectionState, 'connecting');
+    assertEquals(client.sentPackets[0].type, "connect");
+    assertEquals(client.connectionState, "connecting");
 
     client.testReceivePacket({
-      type: 'connack',
+      type: "connack",
       returnCode: 0,
       sessionPresent: false,
     });
 
-    assertEquals(client.connectionState, 'connected');
+    assertEquals(client.connectionState, "connected");
 
-    const subscribe1Promise = client.subscribe('topic1');
+    const subscribe1Promise = client.subscribe("topic1");
 
     assertEquals(client.subscriptions, [
-      { topicFilter: 'topic1', qos: 0, state: 'pending' },
+      { topicFilter: "topic1", qos: 0, state: "pending" },
     ]);
 
     // Sleep a little to allow the subscribe packet to be sent.
     await client.sleep(1);
 
     assertEquals(client.subscriptions, [
-      { topicFilter: 'topic1', qos: 0, state: 'unacknowledged' },
+      { topicFilter: "topic1", qos: 0, state: "unacknowledged" },
     ]);
 
     assertEquals(client.sentPackets.length, 2);
     const subscribe1Packet = client.sentPackets[1] as SubscribePacket;
 
-    assertEquals(subscribe1Packet.type, 'subscribe');
+    assertEquals(subscribe1Packet.type, "subscribe");
     assertEquals(subscribe1Packet.subscriptions, [
-      { topicFilter: 'topic1', qos: 0 },
+      { topicFilter: "topic1", qos: 0 },
     ]);
 
     client.testReceivePacket({
-      type: 'suback',
+      type: "suback",
       id: subscribe1Packet.id,
       returnCodes: [0],
     });
 
     assertEquals(client.subscriptions, [
-      { topicFilter: 'topic1', qos: 0, state: 'acknowledged', returnCode: 0 },
+      { topicFilter: "topic1", qos: 0, state: "acknowledged", returnCode: 0 },
     ]);
 
     const subscribe1Result = await subscribe1Promise;
 
     assertEquals(subscribe1Result, [
-      { topicFilter: 'topic1', qos: 0, state: 'acknowledged', returnCode: 0 },
+      { topicFilter: "topic1", qos: 0, state: "acknowledged", returnCode: 0 },
     ]);
 
     // Break the connection so we can test resubscribing.
     client.testCloseConnection();
 
-    assertEquals(client.connectionState, 'offline');
+    assertEquals(client.connectionState, "offline");
 
     const topic1Subscription = client.subscriptions[0];
 
-    const unsubscribe1Promise = client.unsubscribe('topic1');
+    const unsubscribe1Promise = client.unsubscribe("topic1");
 
     assertEquals(client.subscriptions, []);
 
     const unsubscribe1Result = await unsubscribe1Promise;
 
     assertEquals(unsubscribe1Result, [
-      { topicFilter: 'topic1', qos: 0, state: 'removed', returnCode: 0 },
+      { topicFilter: "topic1", qos: 0, state: "removed", returnCode: 0 },
     ]);
 
     assertEquals(unsubscribe1Result[0], topic1Subscription);
-  }
+  },
 );
 
 Deno.test(
-  'unsubscribing while offline sends unsubscribe after reconnecting when not clean and session present',
+  "unsubscribing while offline sends unsubscribe after reconnecting when not clean and session present",
   async () => {
     const client = new TestClient({ clean: false });
 
     client.connect();
 
-    assertEquals(client.connectionState, 'connecting');
+    assertEquals(client.connectionState, "connecting");
 
     // Sleep a little to allow the connect packet to be sent.
     await client.sleep(1);
 
     assertEquals(client.sentPackets.length, 1);
-    assertEquals(client.sentPackets[0].type, 'connect');
-    assertEquals(client.connectionState, 'connecting');
+    assertEquals(client.sentPackets[0].type, "connect");
+    assertEquals(client.connectionState, "connecting");
 
     client.testReceivePacket({
-      type: 'connack',
+      type: "connack",
       returnCode: 0,
       sessionPresent: false,
     });
 
-    assertEquals(client.connectionState, 'connected');
+    assertEquals(client.connectionState, "connected");
 
-    const subscribe1Promise = client.subscribe('topic1');
+    const subscribe1Promise = client.subscribe("topic1");
 
     assertEquals(client.subscriptions, [
-      { topicFilter: 'topic1', qos: 0, state: 'pending' },
+      { topicFilter: "topic1", qos: 0, state: "pending" },
     ]);
 
     // Sleep a little to allow the subscribe packet to be sent.
     await client.sleep(1);
 
     assertEquals(client.subscriptions, [
-      { topicFilter: 'topic1', qos: 0, state: 'unacknowledged' },
+      { topicFilter: "topic1", qos: 0, state: "unacknowledged" },
     ]);
 
     assertEquals(client.sentPackets.length, 2);
     const subscribe1Packet = client.sentPackets[1] as SubscribePacket;
 
-    assertEquals(subscribe1Packet.type, 'subscribe');
+    assertEquals(subscribe1Packet.type, "subscribe");
     assertEquals(subscribe1Packet.subscriptions, [
-      { topicFilter: 'topic1', qos: 0 },
+      { topicFilter: "topic1", qos: 0 },
     ]);
 
     client.testReceivePacket({
-      type: 'suback',
+      type: "suback",
       id: subscribe1Packet.id,
       returnCodes: [0],
     });
 
     assertEquals(client.subscriptions, [
-      { topicFilter: 'topic1', qos: 0, state: 'acknowledged', returnCode: 0 },
+      { topicFilter: "topic1", qos: 0, state: "acknowledged", returnCode: 0 },
     ]);
 
     const subscribe1Result = await subscribe1Promise;
 
     assertEquals(subscribe1Result, [
-      { topicFilter: 'topic1', qos: 0, state: 'acknowledged', returnCode: 0 },
+      { topicFilter: "topic1", qos: 0, state: "acknowledged", returnCode: 0 },
     ]);
 
     // Break the connection so we can test resubscribing.
     client.testCloseConnection();
 
-    assertEquals(client.connectionState, 'offline');
+    assertEquals(client.connectionState, "offline");
 
-    const unsubscribe1Promise = client.unsubscribe('topic1');
+    const unsubscribe1Promise = client.unsubscribe("topic1");
 
     let unsubscribe1Resolved = false;
 
@@ -562,52 +562,52 @@ Deno.test(
 
     assertEquals(client.subscriptions, [
       {
-        topicFilter: 'topic1',
+        topicFilter: "topic1",
         qos: 0,
-        state: 'unsubscribe-pending',
+        state: "unsubscribe-pending",
         returnCode: 0,
       },
     ]);
 
-    client.testTriggerTimer('reconnect');
+    client.testTriggerTimer("reconnect");
 
-    assertEquals(client.connectionState, 'connecting');
+    assertEquals(client.connectionState, "connecting");
 
     // Sleep a little to allow the connect packet to be sent.
     await client.sleep(1);
 
     assertEquals(client.sentPackets.length, 3);
-    assertEquals(client.sentPackets[2].type, 'connect');
-    assertEquals(client.connectionState, 'connecting');
+    assertEquals(client.sentPackets[2].type, "connect");
+    assertEquals(client.connectionState, "connecting");
 
     client.testReceivePacket({
-      type: 'connack',
+      type: "connack",
       returnCode: 0,
       sessionPresent: true,
     });
 
-    assertEquals(client.connectionState, 'connected');
+    assertEquals(client.connectionState, "connected");
 
     // Sleep a little to allow the unsubscribe packet to be sent.
     await client.sleep(1);
 
     assertEquals(client.sentPackets.length, 4);
-    assertEquals(client.sentPackets[3].type, 'unsubscribe');
+    assertEquals(client.sentPackets[3].type, "unsubscribe");
 
     const unsubscribe1Packet = client.sentPackets[3] as UnsubscribePacket;
 
-    assertEquals(unsubscribe1Packet.topicFilters, ['topic1']);
+    assertEquals(unsubscribe1Packet.topicFilters, ["topic1"]);
 
     const topic1Subscription = client.subscriptions[0];
 
     assertEquals(topic1Subscription, {
-      topicFilter: 'topic1',
+      topicFilter: "topic1",
       qos: 0,
-      state: 'unsubscribe-unacknowledged',
+      state: "unsubscribe-unacknowledged",
       returnCode: 0,
     });
 
-    client.testReceivePacket({ type: 'unsuback', id: unsubscribe1Packet.id });
+    client.testReceivePacket({ type: "unsuback", id: unsubscribe1Packet.id });
 
     assertEquals(unsubscribe1Resolved, false);
 
@@ -621,44 +621,44 @@ Deno.test(
     assertEquals(client.subscriptions, []);
 
     assertEquals(topic1Subscription, {
-      topicFilter: 'topic1',
+      topicFilter: "topic1",
       qos: 0,
-      state: 'unsubscribe-acknowledged',
+      state: "unsubscribe-acknowledged",
       returnCode: 0,
     });
 
     assertEquals(unsubscribe1Result[0], topic1Subscription);
-  }
+  },
 );
 
 Deno.test(
-  'unsubscribing while offline does not send unsubscribe after reconnecting when not clean and session not present',
+  "unsubscribing while offline does not send unsubscribe after reconnecting when not clean and session not present",
   async () => {
     const client = new TestClient({ clean: false });
 
     client.connect();
 
-    assertEquals(client.connectionState, 'connecting');
+    assertEquals(client.connectionState, "connecting");
 
     // Sleep a little to allow the connect packet to be sent.
     await client.sleep(1);
 
     assertEquals(client.sentPackets.length, 1);
-    assertEquals(client.sentPackets[0].type, 'connect');
-    assertEquals(client.connectionState, 'connecting');
+    assertEquals(client.sentPackets[0].type, "connect");
+    assertEquals(client.connectionState, "connecting");
 
     client.testReceivePacket({
-      type: 'connack',
+      type: "connack",
       returnCode: 0,
       sessionPresent: false,
     });
 
-    assertEquals(client.connectionState, 'connected');
+    assertEquals(client.connectionState, "connected");
 
-    const subscribe1Promise = client.subscribe('topic1');
+    const subscribe1Promise = client.subscribe("topic1");
 
     assertEquals(client.subscriptions, [
-      { topicFilter: 'topic1', qos: 0, state: 'pending' },
+      { topicFilter: "topic1", qos: 0, state: "pending" },
     ]);
 
     const topic1Subscription = client.subscriptions[0];
@@ -667,39 +667,39 @@ Deno.test(
     await client.sleep(1);
 
     assertEquals(client.subscriptions, [
-      { topicFilter: 'topic1', qos: 0, state: 'unacknowledged' },
+      { topicFilter: "topic1", qos: 0, state: "unacknowledged" },
     ]);
 
     assertEquals(client.sentPackets.length, 2);
     const subscribe1Packet = client.sentPackets[1] as SubscribePacket;
 
-    assertEquals(subscribe1Packet.type, 'subscribe');
+    assertEquals(subscribe1Packet.type, "subscribe");
     assertEquals(subscribe1Packet.subscriptions, [
-      { topicFilter: 'topic1', qos: 0 },
+      { topicFilter: "topic1", qos: 0 },
     ]);
 
     client.testReceivePacket({
-      type: 'suback',
+      type: "suback",
       id: subscribe1Packet.id,
       returnCodes: [0],
     });
 
     assertEquals(client.subscriptions, [
-      { topicFilter: 'topic1', qos: 0, state: 'acknowledged', returnCode: 0 },
+      { topicFilter: "topic1", qos: 0, state: "acknowledged", returnCode: 0 },
     ]);
 
     const subscribe1Result = await subscribe1Promise;
 
     assertEquals(subscribe1Result, [
-      { topicFilter: 'topic1', qos: 0, state: 'acknowledged', returnCode: 0 },
+      { topicFilter: "topic1", qos: 0, state: "acknowledged", returnCode: 0 },
     ]);
 
     // Break the connection so we can test resubscribing.
     client.testCloseConnection();
 
-    assertEquals(client.connectionState, 'offline');
+    assertEquals(client.connectionState, "offline");
 
-    const unsubscribe1Promise = client.unsubscribe('topic1');
+    const unsubscribe1Promise = client.unsubscribe("topic1");
 
     let unsubscribe1Resolved = false;
 
@@ -709,31 +709,31 @@ Deno.test(
 
     assertEquals(client.subscriptions, [
       {
-        topicFilter: 'topic1',
+        topicFilter: "topic1",
         qos: 0,
-        state: 'unsubscribe-pending',
+        state: "unsubscribe-pending",
         returnCode: 0,
       },
     ]);
 
-    client.testTriggerTimer('reconnect');
+    client.testTriggerTimer("reconnect");
 
-    assertEquals(client.connectionState, 'connecting');
+    assertEquals(client.connectionState, "connecting");
 
     // Sleep a little to allow the connect packet to be sent.
     await client.sleep(1);
 
     assertEquals(client.sentPackets.length, 3);
-    assertEquals(client.sentPackets[2].type, 'connect');
-    assertEquals(client.connectionState, 'connecting');
+    assertEquals(client.sentPackets[2].type, "connect");
+    assertEquals(client.connectionState, "connecting");
 
     client.testReceivePacket({
-      type: 'connack',
+      type: "connack",
       returnCode: 0,
       sessionPresent: false,
     });
 
-    assertEquals(client.connectionState, 'connected');
+    assertEquals(client.connectionState, "connected");
 
     // Sleep a little to allow the unsubscribe packet to be sent.
     await client.sleep(1);
@@ -746,9 +746,9 @@ Deno.test(
 
     // The state is now removed.
     assertEquals(topic1Subscription, {
-      topicFilter: 'topic1',
+      topicFilter: "topic1",
       qos: 0,
-      state: 'removed',
+      state: "removed",
       returnCode: 0,
     });
 
@@ -759,13 +759,13 @@ Deno.test(
 
     assertEquals(unsubscribe1Result, [
       {
-        topicFilter: 'topic1',
+        topicFilter: "topic1",
         qos: 0,
-        state: 'removed',
+        state: "removed",
         returnCode: 0,
       },
     ]);
 
     assertEquals(unsubscribe1Result[0], topic1Subscription);
-  }
+  },
 );

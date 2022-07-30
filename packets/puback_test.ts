@@ -1,10 +1,10 @@
-import { assertEquals } from 'https://deno.land/std@0.70.0/testing/asserts.ts';
-import { encode, decode } from './mod.ts';
+import { assertEquals } from "https://deno.land/std@0.70.0/testing/asserts.ts";
+import { decode, encode } from "./mod.ts";
 
-Deno.test('encodePubackPacket', function encodePubackPacket() {
+Deno.test("encodePubackPacket", function encodePubackPacket() {
   assertEquals(
     encode({
-      type: 'puback',
+      type: "puback",
       id: 1337,
     }),
     [
@@ -14,11 +14,11 @@ Deno.test('encodePubackPacket', function encodePubackPacket() {
       // variableHeader
       5, // id MSB
       57, // id LSB
-    ]
+    ],
   );
 });
 
-Deno.test('decodePubackPacket', function decodePubackPacket() {
+Deno.test("decodePubackPacket", function decodePubackPacket() {
   assertEquals(
     decode(
       Uint8Array.from([
@@ -28,17 +28,17 @@ Deno.test('decodePubackPacket', function decodePubackPacket() {
         // variableHeader
         5, // id MSB
         57, // id LSB
-      ])
+      ]),
     ),
     {
-      type: 'puback',
+      type: "puback",
       id: 1337,
       length: 4,
-    }
+    },
   );
 });
 
-Deno.test('decodeShortPubackPackets', function decodeShortPubackPackets() {
+Deno.test("decodeShortPubackPackets", function decodeShortPubackPackets() {
   assertEquals(decode(Uint8Array.from([0x40])), null);
   assertEquals(decode(Uint8Array.from([0x40, 2])), null);
   assertEquals(decode(Uint8Array.from([0x40, 2, 5])), null);

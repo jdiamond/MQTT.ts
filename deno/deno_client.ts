@@ -99,7 +99,7 @@ export class Client extends BaseClient {
       }
     })().then(
       () => {},
-      () => {}
+      () => {},
     );
   }
 

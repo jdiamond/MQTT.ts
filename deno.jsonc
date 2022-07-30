@@ -3,8 +3,11 @@
     "files": {
       "include": [
         "browser/browser_client.ts",
+        "browser/index.ts",
         "client",
         "deno",
+        "lib",
+        "node/index.ts",
         "node/node_client.ts",
         "packets"
       ]
@@ -14,8 +17,11 @@
     "files": {
       "include": [
         "browser/browser_client.ts",
+        "browser/index.ts",
         "client",
         "deno",
+        "lib",
+        "node/node_client.ts",
         "node/node_client.ts",
         "packets"
       ]

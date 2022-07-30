@@ -1,5 +1,5 @@
 export interface PingresPacket {
-  type: 'pingres';
+  type: "pingres";
 }
 
 export default {
@@ -10,10 +10,10 @@ export default {
   decode(
     _buffer: Uint8Array,
     _remainingStart: number,
-    _remainingLength: number
+    _remainingLength: number,
   ): PingresPacket {
     return {
-      type: 'pingres',
+      type: "pingres",
     };
   },
 };

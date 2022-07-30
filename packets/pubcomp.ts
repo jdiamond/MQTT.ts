@@ -1,5 +1,5 @@
 export interface PubcompPacket {
-  type: 'pubcomp';
+  type: "pubcomp";
   id: number;
 }
 
@@ -14,12 +14,12 @@ export default {
   decode(
     buffer: Uint8Array,
     _remainingStart: number,
-    _remainingLength: number
+    _remainingLength: number,
   ): PubcompPacket {
     const id = (buffer[2] << 8) + buffer[3];
 
     return {
-      type: 'pubcomp',
+      type: "pubcomp",
       id,
     };
   },

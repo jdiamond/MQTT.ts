@@ -1,19 +1,19 @@
-import { assertEquals } from 'https://deno.land/std@0.70.0/testing/asserts.ts';
-import { encode, decode } from './mod.ts';
+import { assertEquals } from "https://deno.land/std@0.70.0/testing/asserts.ts";
+import { decode, encode } from "./mod.ts";
 
 const utf8Encoder = new TextEncoder();
 const utf8Decoder = new TextDecoder();
 
 Deno.test(
-  'encodeConnectPacketWithClientId',
+  "encodeConnectPacketWithClientId",
   function encodeConnectPacketWithClientId() {
     assertEquals(
       encode(
         {
-          type: 'connect',
-          clientId: 'id',
+          type: "connect",
+          clientId: "id",
         },
-        utf8Encoder
+        utf8Encoder,
       ),
       [
         // fixedHeader
@@ -36,22 +36,22 @@ Deno.test(
         2, // length LSB
         105, // 'i'
         100, // 'd'
-      ]
+      ],
     );
-  }
+  },
 );
 
 Deno.test(
-  'encodeConnectPacketWithCleanFalse',
+  "encodeConnectPacketWithCleanFalse",
   function encodeConnectPacketWithCleanFalse() {
     assertEquals(
       encode(
         {
-          type: 'connect',
-          clientId: 'id',
+          type: "connect",
+          clientId: "id",
           clean: false,
         },
-        utf8Encoder
+        utf8Encoder,
       ),
       [
         // fixedHeader
@@ -74,22 +74,22 @@ Deno.test(
         2, // length LSB
         105, // 'i'
         100, // 'd'
-      ]
+      ],
     );
-  }
+  },
 );
 
 Deno.test(
-  'encodeConnectPacketWithKeepAlive',
+  "encodeConnectPacketWithKeepAlive",
   function encodeConnectPacketWithKeepAlive() {
     assertEquals(
       encode(
         {
-          type: 'connect',
-          clientId: 'id',
+          type: "connect",
+          clientId: "id",
           keepAlive: 300,
         },
-        utf8Encoder
+        utf8Encoder,
       ),
       [
         // fixedHeader
@@ -112,23 +112,23 @@ Deno.test(
         2, // length LSB
         105, // 'i'
         100, // 'd'
-      ]
+      ],
     );
-  }
+  },
 );
 
 Deno.test(
-  'encodeConnectPacketWithUsernameAndPassword',
+  "encodeConnectPacketWithUsernameAndPassword",
   function encodeConnectPacketWithUsernameAndPassword() {
     assertEquals(
       encode(
         {
-          type: 'connect',
-          clientId: 'id',
-          username: 'user',
-          password: 'pass',
+          type: "connect",
+          clientId: "id",
+          username: "user",
+          password: "pass",
         },
-        utf8Encoder
+        utf8Encoder,
       ),
       [
         // fixedHeader
@@ -165,13 +165,13 @@ Deno.test(
         97, // 'a'
         115, // 's'
         115, // 's'
-      ]
+      ],
     );
-  }
+  },
 );
 
 Deno.test(
-  'decodeConnectPacketWithUsernameAndPassword',
+  "decodeConnectPacketWithUsernameAndPassword",
   function decodeConnectPacketWithUsernameAndPassword() {
     assertEquals(
       decode(
@@ -211,20 +211,20 @@ Deno.test(
           115, // 's'
           115, // 's'
         ]),
-        utf8Decoder
+        utf8Decoder,
       ),
       {
-        type: 'connect',
-        clientId: 'id',
-        protocolName: 'MQTT',
+        type: "connect",
+        clientId: "id",
+        protocolName: "MQTT",
         protocolLevel: 4,
-        username: 'user',
-        password: 'pass',
+        username: "user",
+        password: "pass",
         will: undefined,
         clean: true,
         keepAlive: 0,
         length: 28,
-      }
+      },
     );
-  }
+  },
 );

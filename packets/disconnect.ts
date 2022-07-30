@@ -1,5 +1,5 @@
 export interface DisconnectPacket {
-  type: 'disconnect';
+  type: "disconnect";
 }
 
 export default {
@@ -13,10 +13,10 @@ export default {
   decode(
     _buffer: Uint8Array,
     _remainingStart: number,
-    _remainingLength: number
+    _remainingLength: number,
   ): DisconnectPacket {
     return {
-      type: 'disconnect',
+      type: "disconnect",
     };
   },
 };

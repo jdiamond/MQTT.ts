@@ -28,7 +28,7 @@ export function decodeLength(buffer: Uint8Array, startIndex: number) {
     value += (encodedByte & 127) * multiplier;
 
     if (multiplier > 128 * 128 * 128) {
-      throw Error('malformed length');
+      throw Error("malformed length");
     }
 
     multiplier *= 128;

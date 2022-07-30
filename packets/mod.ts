@@ -1,5 +1,5 @@
 import { decodeLength } from "./length.ts";
-import { UTF8Encoder, UTF8Decoder } from "./utf8.ts";
+import { UTF8Decoder, UTF8Encoder } from "./utf8.ts";
 import connect, { ConnectPacket } from "./connect.ts";
 import connack, { ConnackPacket } from "./connack.ts";
 import publish, { PublishPacket } from "./publish.ts";
@@ -34,20 +34,20 @@ export type AnyPacket =
 export type AnyPacketWithLength = AnyPacket & { length: number };
 
 export type {
-  ConnectPacket,
   ConnackPacket,
-  PublishPacket,
-  PubackPacket,
-  PubrecPacket,
-  PubrelPacket,
-  PubcompPacket,
-  SubscribePacket,
-  SubackPacket,
-  UnsubscribePacket,
-  UnsubackPacket,
+  ConnectPacket,
+  DisconnectPacket,
   PingreqPacket,
   PingresPacket,
-  DisconnectPacket,
+  PubackPacket,
+  PubcompPacket,
+  PublishPacket,
+  PubrecPacket,
+  PubrelPacket,
+  SubackPacket,
+  SubscribePacket,
+  UnsubackPacket,
+  UnsubscribePacket,
 };
 
 const packetTypesByName = {
@@ -87,7 +87,7 @@ const packetTypesById = [
 
 export function encode(
   packet: AnyPacket,
-  utf8Encoder?: UTF8Encoder
+  utf8Encoder?: UTF8Encoder,
 ): Uint8Array {
   const name = packet.type;
   // deno-lint-ignore no-explicit-any
@@ -102,7 +102,7 @@ export function encode(
 
 export function decode(
   buffer: Uint8Array,
-  utf8Decoder?: UTF8Decoder
+  utf8Decoder?: UTF8Decoder,
 ): AnyPacketWithLength | null {
   if (buffer.length < 2) {
     return null;
@@ -118,7 +118,7 @@ export function decode(
 
   const { length: remainingLength, bytesUsedToEncodeLength } = decodeLength(
     buffer,
-    1
+    1,
   );
 
   const packetLength = 1 + bytesUsedToEncodeLength + remainingLength;
@@ -131,14 +131,14 @@ export function decode(
     buffer,
     1 + bytesUsedToEncodeLength,
     remainingLength,
-    utf8Decoder
+    utf8Decoder,
   );
 
   if (!packet) {
     return null;
   }
 
-  const packetWithLength = <AnyPacketWithLength>packet;
+  const packetWithLength = <AnyPacketWithLength> packet;
 
   packetWithLength.length = packetLength;
 

@@ -1,14 +1,14 @@
-import { QoS } from '../lib/mod.ts';
-import { encodeLength } from './length.ts';
+import { QoS } from "../lib/mod.ts";
+import { encodeLength } from "./length.ts";
 import {
-  UTF8Encoder,
-  UTF8Decoder,
-  encodeUTF8String,
   decodeUTF8String,
-} from './utf8.ts';
+  encodeUTF8String,
+  UTF8Decoder,
+  UTF8Encoder,
+} from "./utf8.ts";
 
 export interface SubscribePacket {
-  type: 'subscribe';
+  type: "subscribe";
   id: number;
   subscriptions: Subscription[];
 }
@@ -43,7 +43,7 @@ export default {
     buffer: Uint8Array,
     remainingStart: number,
     _remainingLength: number,
-    utf8Decoder: UTF8Decoder
+    utf8Decoder: UTF8Decoder,
   ): SubscribePacket {
     const idStart = remainingStart;
     const id = (buffer[idStart] << 8) + buffer[idStart + 1];
@@ -51,7 +51,7 @@ export default {
     const subscriptionsStart = idStart + 2;
     const subscriptions: Subscription[] = [];
 
-    for (let i = subscriptionsStart; i < buffer.length; ) {
+    for (let i = subscriptionsStart; i < buffer.length;) {
       const topicFilter = decodeUTF8String(buffer, i, utf8Decoder);
       i += topicFilter.length;
 
@@ -59,7 +59,7 @@ export default {
       i += 1;
 
       if (qos !== 0 && qos !== 1 && qos !== 2) {
-        throw new Error('invalid qos');
+        throw new Error("invalid qos");
       }
 
       subscriptions.push({
@@ -69,7 +69,7 @@ export default {
     }
 
     return {
-      type: 'subscribe',
+      type: "subscribe",
       id,
       subscriptions,
     };

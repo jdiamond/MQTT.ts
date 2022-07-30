@@ -1,5 +1,5 @@
 export interface PubrelPacket {
-  type: 'pubrel';
+  type: "pubrel";
   id: number;
 }
 
@@ -14,12 +14,12 @@ export default {
   decode(
     buffer: Uint8Array,
     _remainingStart: number,
-    _remainingLength: number
+    _remainingLength: number,
   ): PubrelPacket {
     const id = (buffer[2] << 8) + buffer[3];
 
     return {
-      type: 'pubrel',
+      type: "pubrel",
       id,
     };
   },

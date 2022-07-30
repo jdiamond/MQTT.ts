@@ -1,21 +1,21 @@
 import { QoS } from "../lib/mod.ts";
 import {
-  encode,
-  decode,
   AnyPacket,
   AnyPacketWithLength,
   ConnackPacket,
-  PublishPacket,
+  decode,
+  encode,
   PubackPacket,
+  PubcompPacket,
+  PublishPacket,
   PubrecPacket,
   PubrelPacket,
-  PubcompPacket,
-  SubscribePacket,
   SubackPacket,
-  UnsubscribePacket,
+  SubscribePacket,
   UnsubackPacket,
+  UnsubscribePacket,
 } from "../packets/mod.ts";
-import { UTF8Encoder, UTF8Decoder } from "../packets/utf8.ts";
+import { UTF8Decoder, UTF8Encoder } from "../packets/utf8.ts";
 
 type URLFactory = URL | string | (() => URL | string | void);
 type ClientIdFactory = string | (() => string);
@@ -251,15 +251,14 @@ export abstract class Client {
   public constructor(options?: ClientOptions) {
     this.options = options || {};
     this.clientId = this.generateClientId();
-    this.keepAlive =
-      typeof this.options.keepAlive === "number"
-        ? this.options.keepAlive
-        : defaultKeepAlive;
+    this.keepAlive = typeof this.options.keepAlive === "number"
+      ? this.options.keepAlive
+      : defaultKeepAlive;
 
-    this.incomingStore =
-      this.options.incomingStore || new IncomingMemoryStore();
-    this.outgoingStore =
-      this.options.outgoingStore || new OutgoingMemoryStore();
+    this.incomingStore = this.options.incomingStore ||
+      new IncomingMemoryStore();
+    this.outgoingStore = this.options.outgoingStore ||
+      new OutgoingMemoryStore();
 
     this.log = this.options.logger || (() => {});
   }
@@ -271,7 +270,9 @@ export abstract class Client {
         break;
       default:
         return Promise.reject(
-          new Error(`should not be connecting in ${this.connectionState} state`)
+          new Error(
+            `should not be connecting in ${this.connectionState} state`,
+          ),
         );
     }
 
@@ -290,7 +291,7 @@ export abstract class Client {
     topic: string,
     // deno-lint-ignore no-explicit-any
     payload: any,
-    options?: PublishOptions
+    options?: PublishOptions,
   ): Promise<void> {
     const dup = (options && options.dup) || false;
     const qos = (options && options.qos) || 0;
@@ -355,33 +356,33 @@ export abstract class Client {
 
   public async subscribe(
     topicFilter: string,
-    qos?: QoS
+    qos?: QoS,
   ): Promise<Subscription[]>;
 
   public async subscribe(
     topicFilters: string[],
-    qos?: QoS
+    qos?: QoS,
   ): Promise<Subscription[]>;
 
   public async subscribe(
     subscription: SubscriptionOption,
-    qos?: QoS
+    qos?: QoS,
   ): Promise<Subscription[]>;
 
   public async subscribe(
     subscriptions: SubscriptionOption[],
-    qos?: QoS
+    qos?: QoS,
   ): Promise<Subscription[]>;
 
   public async subscribe(
     input: SubscriptionOption | string | (SubscriptionOption | string)[],
-    qos?: QoS
+    qos?: QoS,
   ): Promise<Subscription[]> {
     switch (this.connectionState) {
       case "disconnecting":
       case "disconnected":
         throw new Error(
-          `should not be subscribing in ${this.connectionState} state`
+          `should not be subscribing in ${this.connectionState} state`,
         );
     }
 
@@ -389,10 +390,10 @@ export abstract class Client {
     const subs = arr.map<Subscription>((sub) => {
       return typeof sub === "object"
         ? {
-            topicFilter: sub.topicFilter,
-            qos: sub.qos || qos || 0,
-            state: "pending",
-          }
+          topicFilter: sub.topicFilter,
+          qos: sub.qos || qos || 0,
+          state: "pending",
+        }
         : { topicFilter: sub, qos: qos || 0, state: "pending" };
     });
     const promises = [];
@@ -403,7 +404,7 @@ export abstract class Client {
       // to do when it receives a subscribe packet containing a topic filter
       // matching an existing subscription.
       this.subscriptions = this.subscriptions.filter(
-        (old) => old.topicFilter !== sub.topicFilter
+        (old) => old.topicFilter !== sub.topicFilter,
       );
 
       this.subscriptions.push(sub);
@@ -458,7 +459,7 @@ export abstract class Client {
       case "disconnecting":
       case "disconnected":
         throw new Error(
-          `should not be unsubscribing in ${this.connectionState} state`
+          `should not be unsubscribing in ${this.connectionState} state`,
         );
     }
 
@@ -467,7 +468,7 @@ export abstract class Client {
 
     for (const topicFilter of arr) {
       const sub = this.subscriptions.find(
-        (sub) => sub.topicFilter === topicFilter
+        (sub) => sub.topicFilter === topicFilter,
       ) || { topicFilter, qos: 0, state: "unknown" };
       const deferred = new Deferred<UnsubackPacket | null>();
       const promise = deferred.promise.then(() => sub);
@@ -515,7 +516,7 @@ export abstract class Client {
     for (const sub of this.subscriptions) {
       if (sub.state === "removed") {
         const unresolvedSubscribe = this.unresolvedSubscribes.get(
-          sub.topicFilter
+          sub.topicFilter,
         );
 
         if (unresolvedSubscribe) {
@@ -525,7 +526,7 @@ export abstract class Client {
         }
 
         const unresolvedUnsubscribe = this.unresolvedUnsubscribes.get(
-          sub.topicFilter
+          sub.topicFilter,
         );
 
         if (unresolvedUnsubscribe) {
@@ -541,7 +542,7 @@ export abstract class Client {
     }
 
     this.subscriptions = this.subscriptions.filter(
-      (sub) => sub.state !== "removed"
+      (sub) => sub.state !== "removed",
     );
 
     if (subs.length > 0 && this.connectionState === "connected") {
@@ -581,7 +582,7 @@ export abstract class Client {
         break;
       default:
         throw new Error(
-          `should not be disconnecting in ${this.connectionState} state`
+          `should not be disconnecting in ${this.connectionState} state`,
         );
     }
   }
@@ -611,7 +612,7 @@ export abstract class Client {
 
   protected decode(
     bytes: Uint8Array,
-    utf8Decoder?: UTF8Decoder
+    utf8Decoder?: UTF8Decoder,
   ): AnyPacketWithLength | null {
     return decode(bytes, utf8Decoder);
   }
@@ -783,7 +784,7 @@ export abstract class Client {
         break;
       default:
         throw new Error(
-          `should not be receiving connack packets in ${this.connectionState} state`
+          `should not be receiving connack packets in ${this.connectionState} state`,
         );
     }
 
@@ -802,7 +803,7 @@ export abstract class Client {
     } else if (packet.qos === 1) {
       if (typeof packet.id !== "number" || packet.id < 1) {
         return this.protocolViolation(
-          "publish packet with qos 1 is missing id"
+          "publish packet with qos 1 is missing id",
         );
       }
 
@@ -815,12 +816,12 @@ export abstract class Client {
     } else if (packet.qos === 2) {
       if (typeof packet.id !== "number" || packet.id < 1) {
         return this.protocolViolation(
-          "publish packet with qos 2 is missing id"
+          "publish packet with qos 2 is missing id",
         );
       }
 
-      const emitMessage =
-        !packet.dup || !(await this.incomingStore.has(packet.id));
+      const emitMessage = !packet.dup ||
+        !(await this.incomingStore.has(packet.id));
 
       if (emitMessage) {
         this.incomingStore.store(packet.id);
@@ -883,7 +884,7 @@ export abstract class Client {
 
   protected handleSuback(packet: SubackPacket) {
     const unacknowledgedSubscribe = this.unacknowledgedSubscribes.get(
-      packet.id
+      packet.id,
     );
 
     // TODO: verify returnCodes length matches subscriptions.length
@@ -907,14 +908,14 @@ export abstract class Client {
       }
     } else {
       throw new Error(
-        `received suback packet with unrecognized id ${packet.id}`
+        `received suback packet with unrecognized id ${packet.id}`,
       );
     }
   }
 
   protected handleUnsuback(packet: UnsubackPacket) {
     const unacknowledgedUnsubscribe = this.unacknowledgedUnsubscribes.get(
-      packet.id
+      packet.id,
     );
 
     if (unacknowledgedUnsubscribe) {
@@ -939,7 +940,7 @@ export abstract class Client {
       }
     } else {
       throw new Error(
-        `received unsuback packet with unrecognized id ${packet.id}`
+        `received unsuback packet with unrecognized id ${packet.id}`,
       );
     }
   }
@@ -950,7 +951,7 @@ export abstract class Client {
       () => {
         this.connectTimedOut();
       },
-      this.options.connectTimeout || defaultConnectTimeout
+      this.options.connectTimeout || defaultConnectTimeout,
     );
   }
 
@@ -960,7 +961,7 @@ export abstract class Client {
         break;
       default:
         throw new Error(
-          `connect timer should not be timing out in ${this.connectionState} state`
+          `connect timer should not be timing out in ${this.connectionState} state`,
         );
     }
 
@@ -1044,7 +1045,7 @@ export abstract class Client {
         this.reconnectAttempt++;
         this.openConnection();
       },
-      delay
+      delay,
     );
 
     return true;
@@ -1103,7 +1104,7 @@ export abstract class Client {
   protected startTimer(
     name: string,
     cb: (...args: unknown[]) => void,
-    delay: number
+    delay: number,
   ) {
     if (this.timerExists(name)) {
       this.log(`timer ${name} already exists`);
@@ -1176,10 +1177,9 @@ export abstract class Client {
   }
 
   private getURL(): URL {
-    let url: URL | string | void =
-      typeof this.options.url === "function"
-        ? this.options.url()
-        : this.options.url;
+    let url: URL | string | void = typeof this.options.url === "function"
+      ? this.options.url()
+      : this.options.url;
 
     if (!url) {
       url = this.getDefaultURL();
@@ -1258,7 +1258,7 @@ export abstract class Client {
     if (listeners) {
       this.eventListeners.set(
         eventName,
-        listeners.filter((l) => l !== listener)
+        listeners.filter((l) => l !== listener),
       );
     }
   }

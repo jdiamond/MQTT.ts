@@ -72,7 +72,7 @@ export class TestClient extends BaseClient {
     packet: AnyPacket,
     options: {
       trickle?: boolean;
-    } = {}
+    } = {},
   ) {
     this.testReceiveBytes(this.encode(packet), options);
   }
@@ -82,7 +82,7 @@ export class TestClient extends BaseClient {
     bytes: Uint8Array,
     options: {
       trickle?: boolean;
-    } = {}
+    } = {},
   ) {
     if (options.trickle) {
       for (let i = 0; i < bytes.length; i++) {
@@ -109,7 +109,7 @@ export class TestClient extends BaseClient {
   protected startTimer(
     name: string,
     cb: (...args: unknown[]) => void,
-    _delay: number
+    _delay: number,
   ) {
     this.timerCallbacks[name] = cb;
   }

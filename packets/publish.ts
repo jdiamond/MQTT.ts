@@ -1,9 +1,9 @@
 import { encodeLength } from "./length.ts";
 import {
-  UTF8Encoder,
-  UTF8Decoder,
-  encodeUTF8String,
   decodeUTF8String,
+  encodeUTF8String,
+  UTF8Decoder,
+  UTF8Encoder,
 } from "./utf8.ts";
 
 export interface PublishPacket {
@@ -23,8 +23,7 @@ export default {
 
     const qos = packet.qos || 0;
 
-    const flags =
-      (packet.dup ? 8 : 0) +
+    const flags = (packet.dup ? 8 : 0) +
       (qos & 2 ? 4 : 0) +
       (qos & 1 ? 2 : 0) +
       (packet.retain ? 1 : 0);
@@ -57,7 +56,7 @@ export default {
     buffer: Uint8Array,
     remainingStart: number,
     remainingLength: number,
-    utf8Decoder: UTF8Decoder
+    utf8Decoder: UTF8Decoder,
   ): PublishPacket {
     const flags = buffer[0] & 0x0f;
 
@@ -86,7 +85,7 @@ export default {
 
     const payload = buffer.slice(
       payloadStart,
-      remainingStart + remainingLength
+      remainingStart + remainingLength,
     );
 
     return {

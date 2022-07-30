@@ -1,10 +1,10 @@
-import { assertEquals } from 'https://deno.land/std@0.70.0/testing/asserts.ts';
-import { encode, decode } from './mod.ts';
+import { assertEquals } from "https://deno.land/std@0.70.0/testing/asserts.ts";
+import { decode, encode } from "./mod.ts";
 
-Deno.test('encodePubrecPacket', function encodePubrecPacket() {
+Deno.test("encodePubrecPacket", function encodePubrecPacket() {
   assertEquals(
     encode({
-      type: 'pubrec',
+      type: "pubrec",
       id: 1337,
     }),
     [
@@ -14,11 +14,11 @@ Deno.test('encodePubrecPacket', function encodePubrecPacket() {
       // variableHeader
       5, // id MSB
       57, // id LSB
-    ]
+    ],
   );
 });
 
-Deno.test('decodePubrecPacket', function decodePubrecPacket() {
+Deno.test("decodePubrecPacket", function decodePubrecPacket() {
   assertEquals(
     decode(
       Uint8Array.from([
@@ -28,17 +28,17 @@ Deno.test('decodePubrecPacket', function decodePubrecPacket() {
         // variableHeader
         5, // id MSB
         57, // id LSB
-      ])
+      ]),
     ),
     {
-      type: 'pubrec',
+      type: "pubrec",
       id: 1337,
       length: 4,
-    }
+    },
   );
 });
 
-Deno.test('decodeShortPubrecPackets', function decodeShortPubrecPackets() {
+Deno.test("decodeShortPubrecPackets", function decodeShortPubrecPackets() {
   assertEquals(decode(Uint8Array.from([0x50])), null);
   assertEquals(decode(Uint8Array.from([0x50, 2])), null);
   assertEquals(decode(Uint8Array.from([0x50, 2, 5])), null);

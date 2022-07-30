@@ -18,7 +18,7 @@ export function encodeUTF8String(str: string, encoder: UTF8Encoder) {
 export function decodeUTF8String(
   buffer: Uint8Array,
   startIndex: number,
-  utf8Decoder: UTF8Decoder
+  utf8Decoder: UTF8Decoder,
 ) {
   const length = (buffer[startIndex] << 8) + buffer[startIndex + 1];
   const bytes = buffer.slice(startIndex + 2, startIndex + 2 + length);

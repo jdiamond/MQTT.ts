@@ -1,13 +1,13 @@
-import { encodeLength } from './length.ts';
+import { encodeLength } from "./length.ts";
 import {
-  UTF8Encoder,
-  UTF8Decoder,
-  encodeUTF8String,
   decodeUTF8String,
-} from './utf8.ts';
+  encodeUTF8String,
+  UTF8Decoder,
+  UTF8Encoder,
+} from "./utf8.ts";
 
 export interface UnsubscribePacket {
-  type: 'unsubscribe';
+  type: "unsubscribe";
   id: number;
   topicFilters: string[];
 }
@@ -37,7 +37,7 @@ export default {
     buffer: Uint8Array,
     remainingStart: number,
     _remainingLength: number,
-    utf8Decoder: UTF8Decoder
+    utf8Decoder: UTF8Decoder,
   ): UnsubscribePacket {
     const idStart = remainingStart;
     const id = (buffer[idStart] << 8) + buffer[idStart + 1];
@@ -45,7 +45,7 @@ export default {
     const topicFiltersStart = idStart + 2;
     const topicFilters: string[] = [];
 
-    for (let i = topicFiltersStart; i < buffer.length; ) {
+    for (let i = topicFiltersStart; i < buffer.length;) {
       const topicFilter = decodeUTF8String(buffer, i, utf8Decoder);
       i += topicFilter.length;
 
@@ -53,7 +53,7 @@ export default {
     }
 
     return {
-      type: 'unsubscribe',
+      type: "unsubscribe",
       id,
       topicFilters,
     };

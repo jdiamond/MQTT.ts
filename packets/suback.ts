@@ -1,5 +1,5 @@
 export interface SubackPacket {
-  type: 'suback';
+  type: "suback";
   id: number;
   returnCodes: number[];
 }
@@ -21,7 +21,7 @@ export default {
   decode(
     buffer: Uint8Array,
     remainingStart: number,
-    _remainingLength: number
+    _remainingLength: number,
   ): SubackPacket {
     const idStart = remainingStart;
     const id = (buffer[idStart] << 8) + buffer[idStart + 1];
@@ -33,7 +33,7 @@ export default {
     }
 
     return {
-      type: 'suback',
+      type: "suback",
       id,
       returnCodes,
     };

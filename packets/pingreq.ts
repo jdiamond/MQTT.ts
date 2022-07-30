@@ -1,5 +1,5 @@
 export interface PingreqPacket {
-  type: 'pingreq';
+  type: "pingreq";
 }
 
 export default {
@@ -13,10 +13,10 @@ export default {
   decode(
     _buffer: Uint8Array,
     _remainingStart: number,
-    _remainingLength: number
+    _remainingLength: number,
   ): PingreqPacket {
     return {
-      type: 'pingreq',
+      type: "pingreq",
     };
   },
 };

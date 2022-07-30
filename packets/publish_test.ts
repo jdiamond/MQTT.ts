@@ -1,17 +1,17 @@
-import { assertEquals } from 'https://deno.land/std@0.70.0/testing/asserts.ts';
-import { encode, decode } from './mod.ts';
+import { assertEquals } from "https://deno.land/std@0.70.0/testing/asserts.ts";
+import { decode, encode } from "./mod.ts";
 
 const utf8Decoder = new TextDecoder();
 
-Deno.test('encodePublishPacket', function encodePublishPacket() {
+Deno.test("encodePublishPacket", function encodePublishPacket() {
   assertEquals(
     encode(
       {
-        type: 'publish',
-        topic: 'a/b',
-        payload: 'payload',
+        type: "publish",
+        topic: "a/b",
+        payload: "payload",
       },
-      new TextEncoder()
+      new TextEncoder(),
     ),
     [
       // fixedHeader
@@ -31,11 +31,11 @@ Deno.test('encodePublishPacket', function encodePublishPacket() {
       111, // 'o'
       97, // 'a'
       100, // 'd'
-    ]
+    ],
   );
 });
 
-Deno.test('decodePublishPacket', function decodePublishPacket() {
+Deno.test("decodePublishPacket", function decodePublishPacket() {
   assertEquals(
     decode(
       Uint8Array.from([
@@ -57,15 +57,15 @@ Deno.test('decodePublishPacket', function decodePublishPacket() {
         97, // 'a'
         100, // 'd'
       ]),
-      utf8Decoder
+      utf8Decoder,
     ),
     {
-      type: 'publish',
+      type: "publish",
       dup: false,
       qos: 0,
       retain: false,
       id: 0,
-      topic: 'a/b',
+      topic: "a/b",
       payload: Uint8Array.from([
         112, // 'p'
         97, // 'a'
@@ -76,12 +76,12 @@ Deno.test('decodePublishPacket', function decodePublishPacket() {
         100, // 'd'
       ]),
       length: 14,
-    }
+    },
   );
 });
 
 Deno.test(
-  'decodePublishPacketWithExtraBytes',
+  "decodePublishPacketWithExtraBytes",
   function decodePublishPacketWithExtraBytes() {
     assertEquals(
       decode(
@@ -107,15 +107,15 @@ Deno.test(
           116, // 't'
           99, // 'c'
         ]),
-        utf8Decoder
+        utf8Decoder,
       ),
       {
-        type: 'publish',
+        type: "publish",
         dup: false,
         qos: 0,
         retain: false,
         id: 0,
-        topic: 'a/b',
+        topic: "a/b",
         payload: Uint8Array.from([
           112, // 'p'
           97, // 'a'
@@ -126,7 +126,7 @@ Deno.test(
           100, // 'd'
         ]),
         length: 14,
-      }
+      },
     );
-  }
+  },
 );

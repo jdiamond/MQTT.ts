@@ -1,31 +1,31 @@
-import { assertEquals } from 'https://deno.land/std@0.70.0/testing/asserts.ts';
-import { encode, decode } from './mod.ts';
+import { assertEquals } from "https://deno.land/std@0.70.0/testing/asserts.ts";
+import { decode, encode } from "./mod.ts";
 
-Deno.test('encodeDisconnectPacket', function encodeDisconnectPacket() {
+Deno.test("encodeDisconnectPacket", function encodeDisconnectPacket() {
   assertEquals(
     encode({
-      type: 'disconnect',
+      type: "disconnect",
     }),
     [
       // fixedHeader
       224, // packetType + flags
       0, // remainingLength
-    ]
+    ],
   );
 });
 
-Deno.test('decodeDisconnectPacket', function decodeDisconnectPacket() {
+Deno.test("decodeDisconnectPacket", function decodeDisconnectPacket() {
   assertEquals(
     decode(
       Uint8Array.from([
         // fixedHeader
         224, // packetType + flags
         0, // remainingLength
-      ])
+      ]),
     ),
     {
-      type: 'disconnect',
+      type: "disconnect",
       length: 2,
-    }
+    },
   );
 });

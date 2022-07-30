@@ -12,7 +12,7 @@ declare function require(moduleName: "net"): Net;
 declare interface Net {
   connect(
     options: { host: string; port: number },
-    connectListener: ClientEventListener
+    connectListener: ClientEventListener,
   ): Socket;
 }
 declare interface Socket {
@@ -71,7 +71,7 @@ export class Client extends BaseClient {
           this.socketState = "connected";
 
           resolve();
-        }
+        },
       );
 
       this.socket = socket;
