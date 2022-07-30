@@ -77,7 +77,7 @@ Example in [examples/browser](examples/browser).
 
 ## Development
 
-First started working with Deno 1.0.0, but I only test with recent versions (most recently 1.4.1). Maybe I should set up some GitHub actions?
+First started working with Deno 1.0.0, but I only test with recent versions (most recently 1.24.1). Maybe I should set up some GitHub actions?
 
 To run the unit tests:
 
@@ -85,10 +85,23 @@ To run the unit tests:
 deno test client packets
 ```
 
-To test publishing and subscribing to a local broker, run these commands in separate shells:
+To run a local broker on macOS:
 
 ```
-/usr/local/sbin/mosquitto -c mosquitto.conf
+brew install mosquitto
+/usr/local/sbin/mosquitto -c mosquitto-mac.conf
+```
+
+To run a local broker on Linux:
+
+```
+sudo apt install mosquitto
+mosquitto -c mosquitto-linux.conf
+```
+
+To test publishing and subscribing to your local broker, run these commands in separate shells:
+
+```
 deno run --allow-net tools/sub.ts -t "foo/#" -v
 deno run --allow-net tools/pub.ts -t "foo/bar" -m "baz"
 ```
