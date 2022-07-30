@@ -1,4 +1,4 @@
-import { QoS } from '../lib/mod.ts';
+import { QoS } from "../lib/mod.ts";
 import {
   encode,
   decode,
@@ -14,8 +14,8 @@ import {
   SubackPacket,
   UnsubscribePacket,
   UnsubackPacket,
-} from '../packets/mod.ts';
-import { UTF8Encoder, UTF8Decoder } from '../packets/utf8.ts';
+} from "../packets/mod.ts";
+import { UTF8Encoder, UTF8Decoder } from "../packets/utf8.ts";
 
 type URLFactory = URL | string | (() => URL | string | void);
 type ClientIdFactory = string | (() => string);
@@ -59,24 +59,24 @@ export type Subscription = {
   topicFilter: string;
   qos: QoS;
   state:
-    | 'unknown'
-    | 'pending'
-    | 'removed'
-    | 'replaced'
-    | 'unacknowledged'
-    | 'acknowledged'
-    | 'unsubscribe-pending'
-    | 'unsubscribe-unacknowledged'
-    | 'unsubscribe-acknowledged';
+    | "unknown"
+    | "pending"
+    | "removed"
+    | "replaced"
+    | "unacknowledged"
+    | "acknowledged"
+    | "unsubscribe-pending"
+    | "unsubscribe-unacknowledged"
+    | "unsubscribe-acknowledged";
   returnCode?: number;
 };
 
 type ConnectionStates =
-  | 'offline'
-  | 'connecting'
-  | 'connected'
-  | 'disconnecting'
-  | 'disconnected';
+  | "offline"
+  | "connecting"
+  | "connected"
+  | "disconnecting"
+  | "disconnected";
 
 const packetIdLimit = 2 ** 16;
 
@@ -98,16 +98,20 @@ export abstract class IncomingStore {
 export class IncomingMemoryStore extends IncomingStore {
   packets = new Set<number>();
 
-  async store(packetId: number): Promise<void> {
+  store(packetId: number) {
     this.packets.add(packetId);
+
+    return Promise.resolve();
   }
 
-  async has(packetId: number): Promise<boolean> {
-    return this.packets.has(packetId);
+  has(packetId: number) {
+    return Promise.resolve(this.packets.has(packetId));
   }
 
-  async discard(packetId: number): Promise<void> {
+  discard(packetId: number) {
     this.packets.delete(packetId);
+
+    return Promise.resolve();
   }
 }
 
@@ -132,16 +136,20 @@ export abstract class OutgoingStore {
 export class OutgoingMemoryStore extends OutgoingStore {
   packets = new Map<number, PublishPacket | PubrelPacket>();
 
-  async store(packet: PublishPacket | PubrelPacket): Promise<void> {
+  store(packet: PublishPacket | PubrelPacket) {
     if (!packet.id) {
-      throw new Error('missing packet.id');
+      return Promise.reject(new Error("missing packet.id"));
     }
 
     this.packets.set(packet.id, packet);
+
+    return Promise.resolve();
   }
 
-  async discard(packetId: number): Promise<void> {
+  discard(packetId: number) {
     this.packets.delete(packetId);
+
+    return Promise.resolve();
   }
 
   async *iterate(): AsyncIterable<PublishPacket | PubrelPacket> {
@@ -158,7 +166,7 @@ const defaultPorts: { [protocol: string]: number } = {
   wss: 443,
 };
 
-const defaultClientIdPrefix = 'mqttts';
+const defaultClientIdPrefix = "mqttts";
 const defaultKeepAlive = 60;
 const defaultConnectTimeout = 10 * 1000;
 const defaultConnectOptions = {
@@ -176,18 +184,21 @@ const defaultReconnectOptions = {
   random: true,
 };
 
+// deno-lint-ignore no-explicit-any
+export type ClientEventListener = (...args: any[]) => void;
+
 export abstract class Client {
   options: ClientOptions;
   url?: URL;
   clientId: string;
   keepAlive: number;
-  connectionState: ConnectionStates = 'offline';
-  everConnected: boolean = false;
-  disconnectRequested: boolean = false;
-  reconnectAttempt: number = 0;
+  connectionState: ConnectionStates = "offline";
+  everConnected = false;
+  disconnectRequested = false;
+  reconnectAttempt = 0;
   subscriptions: Subscription[] = [];
 
-  private lastPacketId: number = 0;
+  private lastPacketId = 0;
   private lastPacketTime: Date | undefined;
 
   private buffer: Uint8Array | null = null;
@@ -228,10 +239,11 @@ export abstract class Client {
     }
   >();
 
-  private eventListeners: Map<string, Function[]> = new Map();
+  private eventListeners: Map<string, ((...args: unknown[]) => void)[]> =
+    new Map();
 
   private timers: {
-    [key: string]: any | undefined;
+    [key: string]: number | undefined;
   } = {};
 
   protected log: (msg: string, ...args: unknown[]) => void;
@@ -240,7 +252,7 @@ export abstract class Client {
     this.options = options || {};
     this.clientId = this.generateClientId();
     this.keepAlive =
-      typeof this.options.keepAlive === 'number'
+      typeof this.options.keepAlive === "number"
         ? this.options.keepAlive
         : defaultKeepAlive;
 
@@ -252,14 +264,14 @@ export abstract class Client {
     this.log = this.options.logger || (() => {});
   }
 
-  public async connect(): Promise<ConnackPacket> {
+  public connect(): Promise<ConnackPacket> {
     switch (this.connectionState) {
-      case 'offline':
-      case 'disconnected':
+      case "offline":
+      case "disconnected":
         break;
       default:
-        throw new Error(
-          `should not be connecting in ${this.connectionState} state`
+        return Promise.reject(
+          new Error(`should not be connecting in ${this.connectionState} state`)
         );
     }
 
@@ -274,8 +286,9 @@ export abstract class Client {
     return deferred.promise;
   }
 
-  public async publish(
+  public publish(
     topic: string,
+    // deno-lint-ignore no-explicit-any
     payload: any,
     options?: PublishOptions
   ): Promise<void> {
@@ -285,7 +298,7 @@ export abstract class Client {
     const id = qos > 0 ? this.nextPacketId() : 0;
 
     const packet: PublishPacket = {
-      type: 'publish',
+      type: "publish",
       dup,
       qos,
       retain,
@@ -296,10 +309,10 @@ export abstract class Client {
 
     const deferred = new Deferred<void>();
 
-    if (this.connectionState === 'connected') {
+    if (this.connectionState === "connected") {
       this.sendPublish(packet, deferred);
     } else {
-      this.log('queueing publish');
+      this.log("queueing publish");
 
       this.queuedPublishes.push({ packet, deferred });
     }
@@ -313,13 +326,13 @@ export abstract class Client {
     while ((queued = this.queuedPublishes.shift())) {
       const { packet, deferred } = queued;
 
-      this.sendPublish(packet, deferred);
+      await this.sendPublish(packet, deferred);
     }
   }
 
   protected async flushUnacknowledgedPublishes() {
     for await (const packet of this.outgoingStore.iterate()) {
-      if (packet.type === 'publish') {
+      if (packet.type === "publish") {
         await this.send({ ...packet, dup: true });
       } else {
         await this.send(packet);
@@ -365,8 +378,8 @@ export abstract class Client {
     qos?: QoS
   ): Promise<Subscription[]> {
     switch (this.connectionState) {
-      case 'disconnecting':
-      case 'disconnected':
+      case "disconnecting":
+      case "disconnected":
         throw new Error(
           `should not be subscribing in ${this.connectionState} state`
         );
@@ -374,13 +387,13 @@ export abstract class Client {
 
     const arr = Array.isArray(input) ? input : [input];
     const subs = arr.map<Subscription>((sub) => {
-      return typeof sub === 'object'
+      return typeof sub === "object"
         ? {
             topicFilter: sub.topicFilter,
             qos: sub.qos || qos || 0,
-            state: 'pending',
+            state: "pending",
           }
-        : { topicFilter: sub, qos: qos || 0, state: 'pending' };
+        : { topicFilter: sub, qos: qos || 0, state: "pending" };
     });
     const promises = [];
 
@@ -408,16 +421,16 @@ export abstract class Client {
   }
 
   protected async flushSubscriptions() {
-    const subs = this.subscriptions.filter((sub) => sub.state === 'pending');
+    const subs = this.subscriptions.filter((sub) => sub.state === "pending");
 
-    if (subs.length > 0 && this.connectionState === 'connected') {
+    if (subs.length > 0 && this.connectionState === "connected") {
       await this.sendSubscribe(subs);
     }
   }
 
   private async sendSubscribe(subscriptions: Subscription[]) {
     const subscribePacket: SubscribePacket = {
-      type: 'subscribe',
+      type: "subscribe",
       id: this.nextPacketId(),
       subscriptions: subscriptions.map((sub) => ({
         topicFilter: sub.topicFilter,
@@ -432,7 +445,7 @@ export abstract class Client {
     await this.send(subscribePacket);
 
     for (const sub of subscriptions) {
-      sub.state = 'unacknowledged';
+      sub.state = "unacknowledged";
     }
   }
 
@@ -442,8 +455,8 @@ export abstract class Client {
 
   public async unsubscribe(input: string | string[]): Promise<Subscription[]> {
     switch (this.connectionState) {
-      case 'disconnecting':
-      case 'disconnected':
+      case "disconnecting":
+      case "disconnected":
         throw new Error(
           `should not be unsubscribing in ${this.connectionState} state`
         );
@@ -455,32 +468,32 @@ export abstract class Client {
     for (const topicFilter of arr) {
       const sub = this.subscriptions.find(
         (sub) => sub.topicFilter === topicFilter
-      ) || { topicFilter, qos: 0, state: 'unknown' };
+      ) || { topicFilter, qos: 0, state: "unknown" };
       const deferred = new Deferred<UnsubackPacket | null>();
       const promise = deferred.promise.then(() => sub);
 
       if (
-        this.connectionState !== 'connected' &&
+        this.connectionState !== "connected" &&
         this.options.clean !== false
       ) {
-        sub.state = 'removed';
+        sub.state = "removed";
       } else {
         switch (sub.state) {
-          case 'pending':
-            sub.state = 'removed';
+          case "pending":
+            sub.state = "removed";
             break;
-          case 'removed':
-          case 'replaced':
+          case "removed":
+          case "replaced":
             // Subscriptions with these states should have already been removed.
             break;
-          case 'unknown':
-          case 'unacknowledged':
-          case 'acknowledged':
-            sub.state = 'unsubscribe-pending';
+          case "unknown":
+          case "unacknowledged":
+          case "acknowledged":
+            sub.state = "unsubscribe-pending";
             break;
-          case 'unsubscribe-pending':
-          case 'unsubscribe-unacknowledged':
-          case 'unsubscribe-acknowledged':
+          case "unsubscribe-pending":
+          case "unsubscribe-unacknowledged":
+          case "unsubscribe-acknowledged":
             // Why is this happening?
             break;
         }
@@ -500,7 +513,7 @@ export abstract class Client {
     const subs = [];
 
     for (const sub of this.subscriptions) {
-      if (sub.state === 'removed') {
+      if (sub.state === "removed") {
         const unresolvedSubscribe = this.unresolvedSubscribes.get(
           sub.topicFilter
         );
@@ -522,23 +535,23 @@ export abstract class Client {
         }
       }
 
-      if (sub.state === 'unsubscribe-pending') {
+      if (sub.state === "unsubscribe-pending") {
         subs.push(sub);
       }
     }
 
     this.subscriptions = this.subscriptions.filter(
-      (sub) => sub.state !== 'removed'
+      (sub) => sub.state !== "removed"
     );
 
-    if (subs.length > 0 && this.connectionState === 'connected') {
+    if (subs.length > 0 && this.connectionState === "connected") {
       await this.sendUnsubscribe(subs);
     }
   }
 
   private async sendUnsubscribe(subscriptions: Subscription[]) {
     const unsubscribePacket: UnsubscribePacket = {
-      type: 'unsubscribe',
+      type: "unsubscribe",
       id: this.nextPacketId(),
       topicFilters: subscriptions.map((sub) => sub.topicFilter),
     };
@@ -550,20 +563,20 @@ export abstract class Client {
     await this.send(unsubscribePacket);
 
     for (const sub of subscriptions) {
-      sub.state = 'unsubscribe-unacknowledged';
+      sub.state = "unsubscribe-unacknowledged";
     }
   }
 
   public async disconnect(): Promise<void> {
     switch (this.connectionState) {
-      case 'connected':
+      case "connected":
         await this.doDisconnect();
         break;
-      case 'connecting':
+      case "connecting":
         this.disconnectRequested = true;
         break;
-      case 'offline':
-        this.changeState('disconnected');
+      case "offline":
+        this.changeState("disconnected");
         this.stopTimers();
         break;
       default:
@@ -574,9 +587,9 @@ export abstract class Client {
   }
 
   private async doDisconnect() {
-    this.changeState('disconnecting');
+    this.changeState("disconnecting");
     this.stopTimers();
-    await this.send({ type: 'disconnect' });
+    await this.send({ type: "disconnect" });
     await this.close();
   }
 
@@ -606,7 +619,7 @@ export abstract class Client {
   // This gets called from connect and when reconnecting.
   protected async openConnection() {
     try {
-      this.changeState('connecting');
+      this.changeState("connecting");
 
       this.url = this.getURL();
 
@@ -615,7 +628,7 @@ export abstract class Client {
       await this.open(this.url);
 
       await this.send({
-        type: 'connect',
+        type: "connect",
         clientId: this.clientId,
         username: this.options.username,
         password: this.options.password,
@@ -627,10 +640,10 @@ export abstract class Client {
     } catch (err) {
       this.log(`caught error opening connection: ${err.message}`);
 
-      this.changeState('offline');
+      this.changeState("offline");
 
       if (!this.startReconnectTimer()) {
-        this.notifyConnectRejected(new Error('connection failed'));
+        this.notifyConnectRejected(new Error("connection failed"));
       }
     }
   }
@@ -639,10 +652,10 @@ export abstract class Client {
   protected async connectionEstablished(connackPacket: ConnackPacket) {
     if (this.options.clean !== false || !connackPacket.sessionPresent) {
       for (const sub of this.subscriptions) {
-        if (sub.state === 'unsubscribe-pending') {
-          sub.state = 'removed';
+        if (sub.state === "unsubscribe-pending") {
+          sub.state = "removed";
         } else {
-          sub.state = 'pending';
+          sub.state = "pending";
         }
       }
     }
@@ -653,7 +666,7 @@ export abstract class Client {
     await this.flushQueuedPublishes();
 
     if (this.unresolvedConnect) {
-      this.log('resolving initial connect');
+      this.log("resolving initial connect");
 
       this.unresolvedConnect.resolve(connackPacket);
     }
@@ -667,14 +680,14 @@ export abstract class Client {
 
   // This gets called by subclasses when the connection is unexpectedly closed.
   protected connectionClosed() {
-    this.log('connectionClosed');
+    this.log("connectionClosed");
 
     switch (this.connectionState) {
-      case 'disconnecting':
-        this.changeState('disconnected');
+      case "disconnecting":
+        this.changeState("disconnected");
         break;
       default:
-        this.changeState('offline');
+        this.changeState("offline");
         this.reconnectAttempt = 0;
         this.startReconnectTimer();
         break;
@@ -683,15 +696,15 @@ export abstract class Client {
     this.stopKeepAliveTimer();
   }
 
-  protected connectionError(error: any) {
+  protected connectionError(error: Error) {
     // TODO: decide what to do with this
-    this.log('connectionError', error);
+    this.log("connectionError", error);
   }
 
   protected bytesReceived(bytes: Uint8Array) {
-    this.log('bytes received', bytes);
+    this.log("bytes received", bytes);
 
-    this.emit('bytesreceived', bytes);
+    this.emit("bytesreceived", bytes);
 
     let buffer: Uint8Array | null = bytes;
 
@@ -730,43 +743,43 @@ export abstract class Client {
   }
 
   protected packetReceived(packet: AnyPacket) {
-    this.emit('packetreceive', packet);
+    this.emit("packetreceive", packet);
 
     switch (packet.type) {
-      case 'connack':
+      case "connack":
         this.handleConnack(packet);
         break;
-      case 'publish':
+      case "publish":
         this.handlePublish(packet);
         break;
-      case 'puback':
+      case "puback":
         this.handlePuback(packet);
         break;
-      case 'pubrec':
+      case "pubrec":
         this.handlePubrec(packet);
         break;
-      case 'pubrel':
+      case "pubrel":
         this.handlePubrel(packet);
         break;
-      case 'pubcomp':
+      case "pubcomp":
         this.handlePubcomp(packet);
         break;
-      case 'suback':
+      case "suback":
         this.handleSuback(packet);
         break;
-      case 'unsuback':
+      case "unsuback":
         this.handleUnsuback(packet);
         break;
     }
   }
 
   protected protocolViolation(msg: string) {
-    this.log('protocolViolation', msg);
+    this.log("protocolViolation", msg);
   }
 
   protected handleConnack(packet: ConnackPacket) {
     switch (this.connectionState) {
-      case 'connecting':
+      case "connecting":
         break;
       default:
         throw new Error(
@@ -774,7 +787,7 @@ export abstract class Client {
         );
     }
 
-    this.changeState('connected');
+    this.changeState("connected");
 
     this.everConnected = true;
 
@@ -785,24 +798,24 @@ export abstract class Client {
 
   protected async handlePublish(packet: PublishPacket) {
     if (packet.qos === 0) {
-      this.emit('message', packet.topic, packet.payload, packet);
+      this.emit("message", packet.topic, packet.payload, packet);
     } else if (packet.qos === 1) {
-      if (typeof packet.id !== 'number' || packet.id < 1) {
+      if (typeof packet.id !== "number" || packet.id < 1) {
         return this.protocolViolation(
-          'publish packet with qos 1 is missing id'
+          "publish packet with qos 1 is missing id"
         );
       }
 
-      this.emit('message', packet.topic, packet.payload, packet);
+      this.emit("message", packet.topic, packet.payload, packet);
 
       this.send({
-        type: 'puback',
+        type: "puback",
         id: packet.id,
       });
     } else if (packet.qos === 2) {
-      if (typeof packet.id !== 'number' || packet.id < 1) {
+      if (typeof packet.id !== "number" || packet.id < 1) {
         return this.protocolViolation(
-          'publish packet with qos 2 is missing id'
+          "publish packet with qos 2 is missing id"
         );
       }
 
@@ -812,11 +825,11 @@ export abstract class Client {
       if (emitMessage) {
         this.incomingStore.store(packet.id);
 
-        this.emit('message', packet.topic, packet.payload, packet);
+        this.emit("message", packet.topic, packet.payload, packet);
       }
 
       this.send({
-        type: 'pubrec',
+        type: "pubrec",
         id: packet.id,
       });
     }
@@ -837,7 +850,7 @@ export abstract class Client {
 
   protected handlePubrec(packet: PubrecPacket) {
     const pubrel: PubrelPacket = {
-      type: 'pubrel',
+      type: "pubrel",
       id: packet.id,
     };
 
@@ -850,7 +863,7 @@ export abstract class Client {
     this.incomingStore.discard(packet.id);
 
     this.send({
-      type: 'pubcomp',
+      type: "pubcomp",
       id: packet.id,
     });
   }
@@ -881,7 +894,7 @@ export abstract class Client {
       let i = 0;
 
       for (const sub of unacknowledgedSubscribe.subscriptions) {
-        sub.state = 'acknowledged';
+        sub.state = "acknowledged";
         sub.returnCode = packet.returnCodes[i++];
 
         const deferred = this.unresolvedSubscribes.get(sub.topicFilter);
@@ -912,7 +925,7 @@ export abstract class Client {
           continue;
         }
 
-        sub.state = 'unsubscribe-acknowledged';
+        sub.state = "unsubscribe-acknowledged";
 
         this.subscriptions = this.subscriptions.filter((s) => s !== sub);
 
@@ -933,7 +946,7 @@ export abstract class Client {
 
   protected startConnectTimer() {
     this.startTimer(
-      'connect',
+      "connect",
       () => {
         this.connectTimedOut();
       },
@@ -943,7 +956,7 @@ export abstract class Client {
 
   protected connectTimedOut() {
     switch (this.connectionState) {
-      case 'connecting':
+      case "connecting":
         break;
       default:
         throw new Error(
@@ -951,11 +964,11 @@ export abstract class Client {
         );
     }
 
-    this.changeState('offline');
+    this.changeState("offline");
 
     this.close();
 
-    this.notifyConnectRejected(new Error('connect timed out'));
+    this.notifyConnectRejected(new Error("connect timed out"));
 
     this.reconnectAttempt = 0;
 
@@ -964,15 +977,15 @@ export abstract class Client {
 
   protected notifyConnectRejected(err: Error) {
     if (this.unresolvedConnect) {
-      this.log('rejecting initial connect');
+      this.log("rejecting initial connect");
 
       this.unresolvedConnect.reject(err);
     }
   }
 
   protected stopConnectTimer() {
-    if (this.timerExists('connect')) {
-      this.stopTimer('connect');
+    if (this.timerExists("connect")) {
+      this.stopTimer("connect");
     }
   }
 
@@ -1026,7 +1039,7 @@ export abstract class Client {
     this.log(`reconnect attempt ${attempt + 1} in ${delay}ms`);
 
     this.startTimer(
-      'reconnect',
+      "reconnect",
       () => {
         this.reconnectAttempt++;
         this.openConnection();
@@ -1038,8 +1051,8 @@ export abstract class Client {
   }
 
   protected stopReconnectTimer() {
-    if (this.timerExists('reconnect')) {
-      this.stopTimer('reconnect');
+    if (this.timerExists("reconnect")) {
+      this.stopTimer("reconnect");
     }
   }
 
@@ -1053,23 +1066,23 @@ export abstract class Client {
     const elapsed = Date.now() - this.lastPacketTime!.getTime();
     const timeout = this.keepAlive * 1000 - elapsed;
 
-    this.startTimer('keepAlive', () => this.sendKeepAlive(), timeout);
+    this.startTimer("keepAlive", () => this.sendKeepAlive(), timeout);
   }
 
   protected stopKeepAliveTimer() {
-    if (this.timerExists('keepAlive')) {
-      this.stopTimer('keepAlive');
+    if (this.timerExists("keepAlive")) {
+      this.stopTimer("keepAlive");
     }
   }
 
   protected async sendKeepAlive() {
-    if (this.connectionState === 'connected') {
+    if (this.connectionState === "connected") {
       const elapsed = Date.now() - this.lastPacketTime!.getTime();
       const timeout = this.keepAlive * 1000;
 
       if (elapsed >= timeout) {
         await this.send({
-          type: 'pingreq',
+          type: "pingreq",
         });
 
         // TODO: need a timer here to disconnect if we don't receive the pingres
@@ -1077,7 +1090,7 @@ export abstract class Client {
 
       this.startKeepAliveTimer();
     } else {
-      this.log('keepAliveTimer should have been cancelled');
+      this.log("keepAliveTimer should have been cancelled");
     }
   }
 
@@ -1140,7 +1153,7 @@ export abstract class Client {
 
     this.log(`connectionState: ${oldState} -> ${newState}`);
 
-    this.emit('statechange', { from: oldState, to: newState });
+    this.emit("statechange", { from: oldState, to: newState });
 
     this.emit(newState);
   }
@@ -1148,9 +1161,9 @@ export abstract class Client {
   protected generateClientId() {
     let clientId;
 
-    if (typeof this.options.clientId === 'string') {
+    if (typeof this.options.clientId === "string") {
       clientId = this.options.clientId;
-    } else if (typeof this.options.clientId === 'function') {
+    } else if (typeof this.options.clientId === "function") {
       clientId = this.options.clientId();
     } else {
       const prefix = this.options.clientIdPrefix || defaultClientIdPrefix;
@@ -1164,7 +1177,7 @@ export abstract class Client {
 
   private getURL(): URL {
     let url: URL | string | void =
-      typeof this.options.url === 'function'
+      typeof this.options.url === "function"
         ? this.options.url()
         : this.options.url;
 
@@ -1172,7 +1185,7 @@ export abstract class Client {
       url = this.getDefaultURL();
     }
 
-    if (typeof url === 'string') {
+    if (typeof url === "string") {
       url = this.parseURL(url);
     }
 
@@ -1194,9 +1207,9 @@ export abstract class Client {
     // in the `pathname` property and leave `host`, `hostname`, and `port`
     // blank. This works around that by re-parsing as an "http:" URL and then
     // changing the protocol back to "mqtt:". Node.js doesn't behave like this.
-    if (!parsed.hostname && parsed.pathname.startsWith('//')) {
+    if (!parsed.hostname && parsed.pathname.startsWith("//")) {
       const protocol = parsed.protocol;
-      parsed = new URL(url.replace(protocol, 'http:'));
+      parsed = new URL(url.replace(protocol, "http:"));
       parsed.protocol = protocol;
     }
 
@@ -1217,18 +1230,18 @@ export abstract class Client {
   protected async send(packet: AnyPacket) {
     this.log(`sending ${packet.type} packet`, packet);
 
-    this.emit('packetsend', packet);
+    this.emit("packetsend", packet);
 
     const bytes = this.encode(packet);
 
-    this.emit('bytessent', bytes);
+    this.emit("bytessent", bytes);
 
     await this.write(bytes);
 
     this.lastPacketTime = new Date();
   }
 
-  public on(eventName: string, listener: Function) {
+  public on(eventName: string, listener: ClientEventListener) {
     let listeners = this.eventListeners.get(eventName);
 
     if (!listeners) {
@@ -1239,7 +1252,7 @@ export abstract class Client {
     listeners.push(listener);
   }
 
-  public off(eventName: string, listener: Function) {
+  public off(eventName: string, listener: (...args: unknown[]) => void) {
     const listeners = this.eventListeners.get(eventName);
 
     if (listeners) {

@@ -1,19 +1,19 @@
-import { decodeLength } from './length.ts';
-import { UTF8Encoder, UTF8Decoder } from './utf8.ts';
-import connect, { ConnectPacket } from './connect.ts';
-import connack, { ConnackPacket } from './connack.ts';
-import publish, { PublishPacket } from './publish.ts';
-import puback, { PubackPacket } from './puback.ts';
-import pubrec, { PubrecPacket } from './pubrec.ts';
-import pubrel, { PubrelPacket } from './pubrel.ts';
-import pubcomp, { PubcompPacket } from './pubcomp.ts';
-import subscribe, { SubscribePacket } from './subscribe.ts';
-import suback, { SubackPacket } from './suback.ts';
-import unsubscribe, { UnsubscribePacket } from './unsubscribe.ts';
-import unsuback, { UnsubackPacket } from './unsuback.ts';
-import pingreq, { PingreqPacket } from './pingreq.ts';
-import pingres, { PingresPacket } from './pingres.ts';
-import disconnect, { DisconnectPacket } from './disconnect.ts';
+import { decodeLength } from "./length.ts";
+import { UTF8Encoder, UTF8Decoder } from "./utf8.ts";
+import connect, { ConnectPacket } from "./connect.ts";
+import connack, { ConnackPacket } from "./connack.ts";
+import publish, { PublishPacket } from "./publish.ts";
+import puback, { PubackPacket } from "./puback.ts";
+import pubrec, { PubrecPacket } from "./pubrec.ts";
+import pubrel, { PubrelPacket } from "./pubrel.ts";
+import pubcomp, { PubcompPacket } from "./pubcomp.ts";
+import subscribe, { SubscribePacket } from "./subscribe.ts";
+import suback, { SubackPacket } from "./suback.ts";
+import unsubscribe, { UnsubscribePacket } from "./unsubscribe.ts";
+import unsuback, { UnsubackPacket } from "./unsuback.ts";
+import pingreq, { PingreqPacket } from "./pingreq.ts";
+import pingres, { PingresPacket } from "./pingres.ts";
+import disconnect, { DisconnectPacket } from "./disconnect.ts";
 
 export type AnyPacket =
   | ConnectPacket
@@ -90,6 +90,7 @@ export function encode(
   utf8Encoder?: UTF8Encoder
 ): Uint8Array {
   const name = packet.type;
+  // deno-lint-ignore no-explicit-any
   const packetType: any = packetTypesByName[name];
 
   if (!packetType) {
@@ -108,6 +109,7 @@ export function decode(
   }
 
   const id = buffer[0] >> 4;
+  // deno-lint-ignore no-explicit-any
   const packetType: any = packetTypesById[id];
 
   if (!packetType) {

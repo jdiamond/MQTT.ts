@@ -1,8 +1,8 @@
 import {
   Client as BaseClient,
   ClientOptions as BaseClientOptions,
-} from './base_client.ts';
-import { AnyPacket } from '../packets/mod.ts';
+} from "./base_client.ts";
+import { AnyPacket } from "../packets/mod.ts";
 
 type TestClientOptions = BaseClientOptions & {
   openRejects?: number;
@@ -15,8 +15,8 @@ export class TestClient extends BaseClient {
   declare options: TestClientOptions;
   sentPackets: AnyPacket[] = [];
   receivedPackets: AnyPacket[] = [];
-  timerCallbacks: { [key: string]: Function } = {};
-  openCalls: number = 0;
+  timerCallbacks: { [key: string]: (...args: unknown[]) => void } = {};
+  openCalls = 0;
 
   constructor(options: TestClientOptions = {}) {
     super({
@@ -27,28 +27,36 @@ export class TestClient extends BaseClient {
 
   // These methods must be overridden by BaseClient subclasses:
   protected getDefaultURL() {
-    return 'mqtt://localhost';
+    return "mqtt://localhost";
   }
 
   protected validateURL() {}
 
-  protected async open() {
+  protected open() {
     this.openCalls++;
+
     if (
       this.options.openRejects &&
       this.openCalls <= this.options.openRejects
     ) {
-      throw new Error('nope');
+      return Promise.reject(new Error("nope"));
     }
+
+    return Promise.resolve();
   }
 
-  protected async write(bytes: Uint8Array) {
+  protected write(bytes: Uint8Array) {
     const packet = this.decode(bytes);
+
     this.sentPackets.push(packet!);
+
+    return Promise.resolve();
   }
 
-  protected async close() {
+  protected close() {
     this.connectionClosed();
+
+    return Promise.resolve();
   }
 
   protected encode(packet: AnyPacket) {

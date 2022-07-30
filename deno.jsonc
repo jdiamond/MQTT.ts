@@ -1,0 +1,33 @@
+{
+  "fmt": {
+    "files": {
+      "include": [
+        "browser/browser_client.ts",
+        "client",
+        "deno",
+        "node/node_client.ts",
+        "packets"
+      ]
+    }
+  },
+  "lint": {
+    "files": {
+      "include": [
+        "browser/browser_client.ts",
+        "client",
+        "deno",
+        "node/node_client.ts",
+        "packets"
+      ]
+    }
+  },
+  "test": {
+    "files": {
+      "include": ["client", "packets"]
+    }
+  },
+  "tasks": {
+    "tsc": "deno check deno/mod.ts browser/index.ts node/index.ts",
+    "check": "deno lint && deno task tsc && deno test"
+  }
+}

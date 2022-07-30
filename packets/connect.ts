@@ -1,13 +1,13 @@
-import { encodeLength } from './length.ts';
+import { encodeLength } from "./length.ts";
 import {
   UTF8Encoder,
   UTF8Decoder,
   encodeUTF8String,
   decodeUTF8String,
-} from './utf8.ts';
+} from "./utf8.ts";
 
 export interface ConnectPacket {
-  type: 'connect';
+  type: "connect";
   protocolName?: string;
   protocolLevel?: number;
   clientId: string;
@@ -26,7 +26,7 @@ export default {
     const packetType = 1;
     const flags = 0;
 
-    const protocolName = encodeUTF8String('MQTT', utf8Encoder);
+    const protocolName = encodeUTF8String("MQTT", utf8Encoder);
     const protocolLevel = 4;
 
     const usernameFlag = !!packet.username;
@@ -34,7 +34,7 @@ export default {
     const willRetain = !!(packet.will && packet.will.retain);
     const willQoS = (packet.will && packet.will.qos) || 0;
     const willFlag = !!packet.will;
-    const cleanSession = packet.clean || typeof packet.clean === 'undefined';
+    const cleanSession = packet.clean || typeof packet.clean === "undefined";
     const connectFlags =
       (usernameFlag ? 128 : 0) +
       (passwordFlag ? 64 : 0) +
@@ -45,7 +45,7 @@ export default {
       (cleanSession ? 2 : 0);
 
     const keepAlive =
-      packet.keepAlive && typeof packet.keepAlive !== 'undefined'
+      packet.keepAlive && typeof packet.keepAlive !== "undefined"
         ? packet.keepAlive
         : 0;
 
@@ -101,7 +101,7 @@ export default {
     const cleanSession = !!(connectFlags & 2);
 
     if (willQoS !== 0 && willQoS !== 1 && willQoS !== 2) {
-      throw new Error('invalid will qos');
+      throw new Error("invalid will qos");
     }
 
     const keepAliveIndex = connectFlagsIndex + 1;
@@ -126,7 +126,7 @@ export default {
     }
 
     return {
-      type: 'connect',
+      type: "connect",
       protocolName: protocolName.value,
       protocolLevel,
       clientId: clientId.value,

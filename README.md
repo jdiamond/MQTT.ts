@@ -79,10 +79,15 @@ Example in [examples/browser](examples/browser).
 
 First started working with Deno 1.0.0, but I only test with recent versions (most recently 1.24.1). Maybe I should set up some GitHub actions?
 
-To run the unit tests:
+To lint, check types, and run tests:
 
 ```
-deno test client packets
+deno lint
+deno task tsc
+deno test
+
+# Or, run all with:
+deno task check
 ```
 
 To run a local broker on macOS:
@@ -109,6 +114,8 @@ deno run --allow-net tools/pub.ts -t "foo/bar" -m "baz"
 To make a release:
 
 ```
+deno task check
+
 cd browser
 # update version in package.json
 npm install

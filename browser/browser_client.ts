@@ -1,10 +1,11 @@
 import {
   Client as BaseClient,
   ClientOptions as BaseClientOptions,
-} from '../client/base_client.ts';
-import { AnyPacket } from '../packets/mod.ts';
+} from "../client/base_client.ts";
+import { AnyPacket } from "../packets/mod.ts";
 
-export type ClientOptions = BaseClientOptions & {};
+// This client doesn't have any extra options.
+export type ClientOptions = BaseClientOptions;
 
 declare class WebSocket {
   constructor(url: string, protocol: string);
@@ -28,27 +29,27 @@ export class Client extends BaseClient {
   }
 
   protected getDefaultURL() {
-    return 'ws://localhost';
+    return "ws://localhost";
   }
 
   protected validateURL(url: URL) {
-    if (!(url.protocol === 'ws:' || url.protocol === 'wss:')) {
+    if (!(url.protocol === "ws:" || url.protocol === "wss:")) {
       throw new Error(`URL protocol must be ws or wss`);
     }
   }
 
-  protected async open(url: URL) {
+  protected open(url: URL) {
     let closed = true;
 
     return new Promise<void>((resolve, reject) => {
-      const ws = new WebSocket(url.toString(), 'mqtt');
+      const ws = new WebSocket(url.toString(), "mqtt");
 
-      ws.binaryType = 'arraybuffer';
+      ws.binaryType = "arraybuffer";
 
       this.ws = ws;
 
       ws.onopen = () => {
-        this.log('connection made');
+        this.log("connection made");
 
         closed = false;
 
@@ -78,7 +79,7 @@ export class Client extends BaseClient {
       };
 
       ws.onerror = (err: Error) => {
-        this.log('connection error');
+        this.log("connection error");
 
         ws.onopen = null;
         ws.onerror = null;
@@ -88,22 +89,26 @@ export class Client extends BaseClient {
     });
   }
 
-  protected async write(bytes: Uint8Array) {
+  protected write(bytes: Uint8Array) {
     if (!this.ws) {
-      throw new Error('no connection');
+      return Promise.reject(new Error("no connection"));
     }
 
-    this.log('writing bytes', bytes);
+    this.log("writing bytes", bytes);
 
     this.ws.send(bytes);
+
+    return Promise.resolve();
   }
 
-  protected async close() {
+  protected close() {
     if (!this.ws) {
-      throw new Error('no connection');
+      return Promise.reject(new Error("no connection"));
     }
 
     this.ws.close();
+
+    return Promise.resolve();
   }
 
   protected encode(packet: AnyPacket) {

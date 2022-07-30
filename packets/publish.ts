@@ -1,14 +1,15 @@
-import { encodeLength } from './length.ts';
+import { encodeLength } from "./length.ts";
 import {
   UTF8Encoder,
   UTF8Decoder,
   encodeUTF8String,
   decodeUTF8String,
-} from './utf8.ts';
+} from "./utf8.ts";
 
 export interface PublishPacket {
-  type: 'publish';
+  type: "publish";
   topic: string;
+  // deno-lint-ignore no-explicit-any
   payload: any;
   dup?: boolean;
   retain?: boolean;
@@ -31,8 +32,8 @@ export default {
     const variableHeader = [...encodeUTF8String(packet.topic, utf8Encoder)];
 
     if (qos === 1 || qos === 2) {
-      if (typeof packet.id !== 'number' || packet.id < 1) {
-        throw new Error('when qos is 1 or 2, packet must have id');
+      if (typeof packet.id !== "number" || packet.id < 1) {
+        throw new Error("when qos is 1 or 2, packet must have id");
       }
 
       variableHeader.push(packet.id >> 8, packet.id & 0xff);
@@ -40,7 +41,7 @@ export default {
 
     let payload = packet.payload;
 
-    if (typeof payload === 'string') {
+    if (typeof payload === "string") {
       payload = utf8Encoder.encode(payload);
     }
 
@@ -65,7 +66,7 @@ export default {
     const retain = !!(flags & 1);
 
     if (qos !== 0 && qos !== 1 && qos !== 2) {
-      throw new Error('invalid qos');
+      throw new Error("invalid qos");
     }
 
     const topicStart = remainingStart;
@@ -89,7 +90,7 @@ export default {
     );
 
     return {
-      type: 'publish',
+      type: "publish",
       topic,
       payload,
       dup,
