@@ -1,4 +1,5 @@
 import { assertEquals } from "https://deno.land/std@0.70.0/testing/asserts.ts";
+import { encode as encodeConnack } from "../packets/connack.ts";
 import { TestClient } from "./test_client.ts";
 
 Deno.test("connect/disconnect", async () => {
@@ -14,11 +15,13 @@ Deno.test("connect/disconnect", async () => {
   assertEquals(client.sentPackets[0].type, "connect");
   assertEquals(client.connectionState, "connecting");
 
-  client.testReceivePacket({
-    type: "connack",
-    returnCode: 0,
-    sessionPresent: false,
-  });
+  client.testReceiveBytes(
+    encodeConnack({
+      type: "connack",
+      returnCode: 0,
+      sessionPresent: false,
+    })
+  );
 
   assertEquals(client.connectionState, "connected");
 
@@ -106,7 +109,7 @@ Deno.test(
 
     // But no disconnect packet should have been written.
     assertEquals(client.sentPackets.length, 0);
-  },
+  }
 );
 
 Deno.test("waiting for connack times out", async () => {
@@ -204,11 +207,13 @@ Deno.test(
     assertEquals(client.connectionState, "connecting");
     assertEquals(connectResolved, false);
 
-    client.testReceivePacket({
-      type: "connack",
-      returnCode: 0,
-      sessionPresent: false,
-    });
+    client.testReceiveBytes(
+      encodeConnack({
+        type: "connack",
+        returnCode: 0,
+        sessionPresent: false,
+      })
+    );
 
     assertEquals(client.connectionState, "connected");
     assertEquals(connectResolved, false);
@@ -218,5 +223,5 @@ Deno.test(
 
     assertEquals(client.connectionState, "connected");
     assertEquals(connectResolved, true);
-  },
+  }
 );

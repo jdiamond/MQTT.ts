@@ -1,10 +1,11 @@
-import { QoS } from "../lib/mod.ts";
-import {
+import type { QoS } from "../lib/mod.ts";
+import { encode as connectEncoder } from "../packets/connect.ts";
+import { encode as disconnectEncoder } from "../packets/disconnect.ts";
+import type {
   AnyPacket,
   AnyPacketWithLength,
   ConnackPacket,
-  decode,
-  encode,
+  PacketEncoder,
   PubackPacket,
   PubcompPacket,
   PublishPacket,
@@ -15,7 +16,16 @@ import {
   UnsubackPacket,
   UnsubscribePacket,
 } from "../packets/mod.ts";
-import { UTF8Decoder, UTF8Encoder } from "../packets/utf8.ts";
+import { decode } from "../packets/mod.ts";
+import { encode as pingreqEncoder } from "../packets/pingreq.ts";
+import { encode as pubackEncoder } from "../packets/puback.ts";
+import { encode as pubcompEncoder } from "../packets/pubcomp.ts";
+import { encode as publishEncoder } from "../packets/publish.ts";
+import { encode as pubrecEncoder } from "../packets/pubrec.ts";
+import { encode as pubrelEncoder } from "../packets/pubrel.ts";
+import { encode as subscribeEncoder } from "../packets/subscribe.ts";
+import { encode as unsubscribeEncoder } from "../packets/unsubscribe.ts";
+import type { UTF8Decoder, UTF8Encoder } from "../packets/utf8.ts";
 
 type URLFactory = URL | string | (() => URL | string | void);
 type ClientIdFactory = string | (() => string);
@@ -345,9 +355,9 @@ export abstract class Client {
   protected async flushUnacknowledgedPublishes() {
     for await (const packet of this.outgoingStore.iterate()) {
       if (packet.type === "publish") {
-        await this.send({ ...packet, dup: true });
+        await this.send({ ...packet, dup: true }, publishEncoder);
       } else {
-        await this.send(packet);
+        await this.send(packet, pubrelEncoder);
       }
     }
   }
@@ -358,7 +368,7 @@ export abstract class Client {
       this.outgoingStore.store(packet);
     }
 
-    await this.send(packet);
+    await this.send(packet, publishEncoder);
 
     if (!packet.qos) {
       deferred.resolve();
@@ -454,7 +464,7 @@ export abstract class Client {
       subscriptions,
     });
 
-    await this.send(subscribePacket);
+    await this.send(subscribePacket, subscribeEncoder);
 
     for (const sub of subscriptions) {
       sub.state = "unacknowledged";
@@ -572,7 +582,7 @@ export abstract class Client {
       subscriptions,
     });
 
-    await this.send(unsubscribePacket);
+    await this.send(unsubscribePacket, unsubscribeEncoder);
 
     for (const sub of subscriptions) {
       sub.state = "unsubscribe-unacknowledged";
@@ -601,7 +611,7 @@ export abstract class Client {
   private async doDisconnect() {
     this.changeState("disconnecting");
     this.stopTimers();
-    await this.send({ type: "disconnect" });
+    await this.send({ type: "disconnect" }, disconnectEncoder);
     await this.close();
   }
 
@@ -616,10 +626,6 @@ export abstract class Client {
   protected abstract write(bytes: Uint8Array): Promise<void>;
 
   protected abstract close(): Promise<void>;
-
-  protected encode<T extends AnyPacket>(packet: T): Uint8Array {
-    return encode(packet, this.utf8Encoder);
-  }
 
   protected decode(bytes: Uint8Array): AnyPacketWithLength | null {
     return decode(bytes, this.utf8Decoder);
@@ -636,14 +642,17 @@ export abstract class Client {
 
       await this.open(this.url);
 
-      await this.send({
-        type: "connect",
-        clientId: this.clientId,
-        username: this.options.username,
-        password: this.options.password,
-        clean: this.options.clean !== false,
-        keepAlive: this.keepAlive,
-      });
+      await this.send(
+        {
+          type: "connect",
+          clientId: this.clientId,
+          username: this.options.username,
+          password: this.options.password,
+          clean: this.options.clean !== false,
+          keepAlive: this.keepAlive,
+        },
+        connectEncoder
+      );
 
       this.startConnectTimer();
     } catch (err) {
@@ -817,10 +826,13 @@ export abstract class Client {
 
       this.emit("message", packet.topic, packet.payload, packet);
 
-      this.send({
-        type: "puback",
-        id: packet.id,
-      });
+      this.send(
+        {
+          type: "puback",
+          id: packet.id,
+        },
+        pubackEncoder
+      );
     } else if (packet.qos === 2) {
       if (typeof packet.id !== "number" || packet.id < 1) {
         return this.protocolViolation(
@@ -837,10 +849,13 @@ export abstract class Client {
         this.emit("message", packet.topic, packet.payload, packet);
       }
 
-      this.send({
-        type: "pubrec",
-        id: packet.id,
-      });
+      this.send(
+        {
+          type: "pubrec",
+          id: packet.id,
+        },
+        pubrecEncoder
+      );
     }
   }
 
@@ -865,16 +880,19 @@ export abstract class Client {
 
     this.outgoingStore.store(pubrel);
 
-    this.send(pubrel);
+    this.send(pubrel, pubrelEncoder);
   }
 
   protected handlePubrel(packet: PubrelPacket) {
     this.incomingStore.discard(packet.id);
 
-    this.send({
-      type: "pubcomp",
-      id: packet.id,
-    });
+    this.send(
+      {
+        type: "pubcomp",
+        id: packet.id,
+      },
+      pubcompEncoder
+    );
   }
 
   protected handlePubcomp(packet: PubcompPacket) {
@@ -1090,9 +1108,12 @@ export abstract class Client {
       const timeout = this.keepAlive * 1000;
 
       if (elapsed >= timeout) {
-        await this.send({
-          type: "pingreq",
-        });
+        await this.send(
+          {
+            type: "pingreq",
+          },
+          pingreqEncoder
+        );
 
         // TODO: need a timer here to disconnect if we don't receive the pingres
       }
@@ -1236,12 +1257,15 @@ export abstract class Client {
     return this.lastPacketId;
   }
 
-  protected async send<T extends AnyPacket>(packet: T) {
+  protected async send<T extends AnyPacket>(
+    packet: T,
+    encoder: PacketEncoder<T>
+  ) {
     this.log(`sending ${packet.type} packet`, packet);
 
     this.emit("packetsend", packet);
 
-    const bytes = this.encode(packet);
+    const bytes = encoder(packet, this.utf8Encoder);
 
     this.emit("bytessent", bytes);
 

@@ -1,16 +1,17 @@
-import { assertEquals } from "https://deno.land/std@0.70.0/testing/asserts.ts";
-import { decode, encode } from "./mod.ts";
+import {
+  assertEquals,
+  assertThrows,
+} from "https://deno.land/std@0.70.0/testing/asserts.ts";
+import type { ConnackPacket } from "./connack.ts";
+import { decode, encode } from "./connack.ts";
 
 Deno.test("encodeConnackPacket", function encodeConnackPacket() {
   assertEquals(
-    encode(
-      {
-        type: "connack",
-        sessionPresent: false,
-        returnCode: 0,
-      },
-      new TextEncoder(),
-    ),
+    encode({
+      type: "connack",
+      sessionPresent: false,
+      returnCode: 0,
+    }),
     [
       // fixedHeader
       32, // packetType + flags
@@ -18,12 +19,12 @@ Deno.test("encodeConnackPacket", function encodeConnackPacket() {
       // variableHeader
       0, // connack flags
       0, // return code
-    ],
+    ]
   );
 });
 
 Deno.test("decodeConnackPacket", function decodeConnackPacket() {
-  assertEquals(
+  assertEquals<ConnackPacket>(
     decode(
       Uint8Array.from([
         // fixedHeader
@@ -33,14 +34,14 @@ Deno.test("decodeConnackPacket", function decodeConnackPacket() {
         0, // connack flags
         0, // return code
       ]),
-      new TextDecoder(),
+      2,
+      2
     ),
     {
       type: "connack",
       sessionPresent: false,
       returnCode: 0,
-      length: 4,
-    },
+    }
   );
 });
 
@@ -48,14 +49,11 @@ Deno.test(
   "enodeConnackPacketWithSessionPresent",
   function decodeConnackPacketWithSessionPresent() {
     assertEquals(
-      encode(
-        {
-          type: "connack",
-          sessionPresent: true,
-          returnCode: 0,
-        },
-        new TextEncoder(),
-      ),
+      encode({
+        type: "connack",
+        sessionPresent: true,
+        returnCode: 0,
+      }),
       [
         // fixedHeader
         32, // packetType + flags
@@ -63,15 +61,15 @@ Deno.test(
         // variableHeader
         1, // connack flags (sessionPresent)
         0, // return code
-      ],
+      ]
     );
-  },
+  }
 );
 
 Deno.test(
   "decodeConnackPacketWithSessionPresent",
   function decodeConnackPacketWithSessionPresent() {
-    assertEquals(
+    assertEquals<ConnackPacket>(
       decode(
         Uint8Array.from([
           // fixedHeader
@@ -81,22 +79,22 @@ Deno.test(
           1, // connack flags (sessionPresent)
           0, // return code
         ]),
-        new TextDecoder(),
+        2,
+        2
       ),
       {
         type: "connack",
         sessionPresent: true,
         returnCode: 0,
-        length: 4,
-      },
+      }
     );
-  },
+  }
 );
 
 Deno.test(
   "decodeConnackPacketWithReturnCode",
   function decodeConnackPacketWithReturnCode() {
-    assertEquals(
+    assertEquals<ConnackPacket>(
       decode(
         Uint8Array.from([
           // fixedHeader
@@ -106,20 +104,20 @@ Deno.test(
           0, // connack flags
           4, // return code (bad username or password)
         ]),
-        new TextDecoder(),
+        2,
+        2
       ),
       {
         type: "connack",
         sessionPresent: false,
         returnCode: 4,
-        length: 4,
-      },
+      }
     );
-  },
+  }
 );
 
 Deno.test("decodeShortConnackPackets", function decodeShortConnackPackets() {
-  assertEquals(decode(Uint8Array.from([32]), new TextDecoder()), null);
-  assertEquals(decode(Uint8Array.from([32, 2]), new TextDecoder()), null);
-  assertEquals(decode(Uint8Array.from([32, 2, 0]), new TextDecoder()), null);
+  // assertEquals(decode(Uint8Array.from([32]), new TextDecoder()), null);
+  assertThrows<ConnackPacket>(() => decode(Uint8Array.from([32, 2]), 2, 0));
+  assertThrows<ConnackPacket>(() => decode(Uint8Array.from([32, 2, 0]), 2, 1));
 });

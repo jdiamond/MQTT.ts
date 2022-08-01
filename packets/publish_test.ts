@@ -1,5 +1,6 @@
 import { assertEquals } from "https://deno.land/std@0.70.0/testing/asserts.ts";
-import { decode, encode } from "./mod.ts";
+import type { PublishPacket } from "./publish.ts";
+import { decode, encode } from "./publish.ts";
 
 const utf8Decoder = new TextDecoder();
 
@@ -11,7 +12,7 @@ Deno.test("encodePublishPacket", function encodePublishPacket() {
         topic: "a/b",
         payload: "payload",
       },
-      new TextEncoder(),
+      new TextEncoder()
     ),
     [
       // fixedHeader
@@ -31,12 +32,12 @@ Deno.test("encodePublishPacket", function encodePublishPacket() {
       111, // 'o'
       97, // 'a'
       100, // 'd'
-    ],
+    ]
   );
 });
 
 Deno.test("decodePublishPacket", function decodePublishPacket() {
-  assertEquals(
+  assertEquals<PublishPacket>(
     decode(
       Uint8Array.from([
         // fixedHeader
@@ -57,7 +58,9 @@ Deno.test("decodePublishPacket", function decodePublishPacket() {
         97, // 'a'
         100, // 'd'
       ]),
-      utf8Decoder,
+      2,
+      12,
+      utf8Decoder
     ),
     {
       type: "publish",
@@ -75,15 +78,14 @@ Deno.test("decodePublishPacket", function decodePublishPacket() {
         97, // 'a'
         100, // 'd'
       ]),
-      length: 14,
-    },
+    }
   );
 });
 
 Deno.test(
   "decodePublishPacketWithExtraBytes",
   function decodePublishPacketWithExtraBytes() {
-    assertEquals(
+    assertEquals<PublishPacket>(
       decode(
         Uint8Array.from([
           // fixedHeader
@@ -107,7 +109,9 @@ Deno.test(
           116, // 't'
           99, // 'c'
         ]),
-        utf8Decoder,
+        2,
+        12,
+        utf8Decoder
       ),
       {
         type: "publish",
@@ -125,8 +129,7 @@ Deno.test(
           97, // 'a'
           100, // 'd'
         ]),
-        length: 14,
-      },
+      }
     );
-  },
+  }
 );

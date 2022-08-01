@@ -1,16 +1,14 @@
 import { assertEquals } from "https://deno.land/std@0.70.0/testing/asserts.ts";
-import { decode, encode } from "./mod.ts";
+import type { SubackPacket } from "./suback.ts";
+import { decode, encode } from "./suback.ts";
 
 Deno.test("encodeSubackPacket", function decodeSubackPacket() {
   assertEquals(
-    encode(
-      {
-        type: "suback",
-        id: 1,
-        returnCodes: [0, 1],
-      },
-      new TextEncoder()
-    ),
+    encode({
+      type: "suback",
+      id: 1,
+      returnCodes: [0, 1],
+    }),
     [
       // fixedHeader
       0x90, // packetType + flags
@@ -26,7 +24,7 @@ Deno.test("encodeSubackPacket", function decodeSubackPacket() {
 });
 
 Deno.test("decodeSubackPacket", function decodeSubackPacket() {
-  assertEquals(
+  assertEquals<SubackPacket>(
     decode(
       Uint8Array.from([
         // fixedHeader
@@ -39,13 +37,13 @@ Deno.test("decodeSubackPacket", function decodeSubackPacket() {
         0,
         1,
       ]),
-      new TextDecoder()
+      2,
+      4
     ),
     {
       type: "suback",
       id: 1,
       returnCodes: [0, 1],
-      length: 6,
     }
   );
 });

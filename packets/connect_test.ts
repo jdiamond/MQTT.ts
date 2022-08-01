@@ -1,8 +1,8 @@
 import { assertEquals } from "https://deno.land/std@0.70.0/testing/asserts.ts";
-import { decode, encode } from "./mod.ts";
+import type { ConnectPacket } from "./connect.ts";
+import { decode, encode } from "./connect.ts";
 
 const utf8Encoder = new TextEncoder();
-const utf8Decoder = new TextDecoder();
 
 Deno.test(
   "encodeConnectPacketWithClientId",
@@ -13,7 +13,7 @@ Deno.test(
           type: "connect",
           clientId: "id",
         },
-        utf8Encoder,
+        utf8Encoder
       ),
       [
         // fixedHeader
@@ -36,9 +36,9 @@ Deno.test(
         2, // length LSB
         105, // 'i'
         100, // 'd'
-      ],
+      ]
     );
-  },
+  }
 );
 
 Deno.test(
@@ -51,7 +51,7 @@ Deno.test(
           clientId: "id",
           clean: false,
         },
-        utf8Encoder,
+        utf8Encoder
       ),
       [
         // fixedHeader
@@ -74,9 +74,9 @@ Deno.test(
         2, // length LSB
         105, // 'i'
         100, // 'd'
-      ],
+      ]
     );
-  },
+  }
 );
 
 Deno.test(
@@ -89,7 +89,7 @@ Deno.test(
           clientId: "id",
           keepAlive: 300,
         },
-        utf8Encoder,
+        utf8Encoder
       ),
       [
         // fixedHeader
@@ -112,9 +112,9 @@ Deno.test(
         2, // length LSB
         105, // 'i'
         100, // 'd'
-      ],
+      ]
     );
-  },
+  }
 );
 
 Deno.test(
@@ -128,7 +128,7 @@ Deno.test(
           username: "user",
           password: "pass",
         },
-        utf8Encoder,
+        utf8Encoder
       ),
       [
         // fixedHeader
@@ -165,15 +165,15 @@ Deno.test(
         97, // 'a'
         115, // 's'
         115, // 's'
-      ],
+      ]
     );
-  },
+  }
 );
 
 Deno.test(
   "decodeConnectPacketWithUsernameAndPassword",
   function decodeConnectPacketWithUsernameAndPassword() {
-    assertEquals(
+    assertEquals<ConnectPacket>(
       decode(
         Uint8Array.from([
           // fixedHeader
@@ -211,7 +211,9 @@ Deno.test(
           115, // 's'
           115, // 's'
         ]),
-        utf8Decoder,
+        2,
+        26,
+        new TextDecoder()
       ),
       {
         type: "connect",
@@ -223,8 +225,7 @@ Deno.test(
         will: undefined,
         clean: true,
         keepAlive: 0,
-        length: 28,
-      },
+      }
     );
-  },
+  }
 );

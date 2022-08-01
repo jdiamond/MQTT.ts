@@ -1,19 +1,33 @@
+import type { ConnackPacket } from "./connack.ts";
+import { decode as connackDecoder } from "./connack.ts";
+import type { ConnectPacket } from "./connect.ts";
+import { decode as connectDecoder } from "./connect.ts";
+import type { DisconnectPacket } from "./disconnect.ts";
+import { decode as disconnectDecoder } from "./disconnect.ts";
 import { decodeLength } from "./length.ts";
-import { UTF8Decoder, UTF8Encoder } from "./utf8.ts";
-import connect, { ConnectPacket } from "./connect.ts";
-import connack, { ConnackPacket } from "./connack.ts";
-import publish, { PublishPacket } from "./publish.ts";
-import puback, { PubackPacket } from "./puback.ts";
-import pubrec, { PubrecPacket } from "./pubrec.ts";
-import pubrel, { PubrelPacket } from "./pubrel.ts";
-import pubcomp, { PubcompPacket } from "./pubcomp.ts";
-import subscribe, { SubscribePacket } from "./subscribe.ts";
-import suback, { SubackPacket } from "./suback.ts";
-import unsubscribe, { UnsubscribePacket } from "./unsubscribe.ts";
-import unsuback, { UnsubackPacket } from "./unsuback.ts";
-import pingreq, { PingreqPacket } from "./pingreq.ts";
-import pingres, { PingresPacket } from "./pingres.ts";
-import disconnect, { DisconnectPacket } from "./disconnect.ts";
+import type { PingreqPacket } from "./pingreq.ts";
+import { decode as pingreqDecoder } from "./pingreq.ts";
+import type { PingresPacket } from "./pingres.ts";
+import { decode as pingresDecoder } from "./pingres.ts";
+import type { PubackPacket } from "./puback.ts";
+import { decode as pubackDecoder } from "./puback.ts";
+import type { PubcompPacket } from "./pubcomp.ts";
+import { decode as pubcompDecoder } from "./pubcomp.ts";
+import type { PublishPacket } from "./publish.ts";
+import { decode as publishDecoder } from "./publish.ts";
+import type { PubrecPacket } from "./pubrec.ts";
+import { decode as pubrecDecoder } from "./pubrec.ts";
+import type { PubrelPacket } from "./pubrel.ts";
+import { decode as pubrelDecoder } from "./pubrel.ts";
+import type { SubackPacket } from "./suback.ts";
+import { decode as subackDecoder } from "./suback.ts";
+import type { SubscribePacket } from "./subscribe.ts";
+import { decode as subscribeDecoder } from "./subscribe.ts";
+import type { UnsubackPacket } from "./unsuback.ts";
+import { decode as unsubackDecoder } from "./unsuback.ts";
+import type { UnsubscribePacket } from "./unsubscribe.ts";
+import { decode as unsubscribeDecoder } from "./unsubscribe.ts";
+import type { UTF8Decoder, UTF8Encoder } from "./utf8.ts";
 
 export type AnyPacket =
   | ConnectPacket
@@ -50,78 +64,35 @@ export type {
   UnsubscribePacket,
 };
 
-type PacketTypes = {
-  connect: ConnectPacket;
-  connack: ConnackPacket;
-  publish: PublishPacket;
-  puback: PubackPacket;
-  pubrec: PubrecPacket;
-  pubrel: PubrelPacket;
-  pubcomp: PubcompPacket;
-  subscribe: SubscribePacket;
-  suback: SubackPacket;
-  unsubscribe: UnsubscribePacket;
-  unsuback: UnsubackPacket;
-  pingreq: PingreqPacket;
-  pingres: PingresPacket;
-  disconnect: DisconnectPacket;
-};
-
-type Encoder<T> = (packet: T, utf8Encoder: UTF8Encoder) => Uint8Array;
-
-type Encoders = {
-  [K in keyof PacketTypes]: Encoder<PacketTypes[K]>;
-};
-
-const encoders: Encoders = {
-  connect: connect.encode,
-  connack: connack.encode,
-  publish: publish.encode,
-  puback: puback.encode,
-  pubrec: pubrec.encode,
-  pubrel: pubrel.encode,
-  pubcomp: pubcomp.encode,
-  subscribe: subscribe.encode,
-  suback: suback.encode,
-  unsubscribe: unsubscribe.encode,
-  unsuback: unsuback.encode,
-  pingreq: pingreq.encode,
-  pingres: pingres.encode,
-  disconnect: disconnect.encode,
-};
-
-function getEncoder<K extends keyof PacketTypes>(
-  type: K
-): Encoder<PacketTypes[K]> {
-  return encoders[type];
-}
-
-const packetTypesById = [
-  null,
-  connect, // 1
-  connack, // 2
-  publish, // 3
-  puback, // 4
-  pubrec, // 5
-  pubrel, // 6
-  pubcomp, // 7
-  subscribe, // 8
-  suback, // 9
-  unsubscribe, // 10
-  unsuback, // 11
-  pingreq, // 12
-  pingres, // 13
-  disconnect, // 14
-];
-
-export function encode<T extends AnyPacket>(
+export type PacketEncoder<T> = (
   packet: T,
   utf8Encoder: UTF8Encoder
-): Uint8Array {
-  const encoder = getEncoder(packet.type);
+) => Uint8Array;
 
-  return encoder(packet, utf8Encoder);
-}
+export type PacketDecoder<T> = (
+  packet: Uint8Array,
+  remainingStart: number,
+  remainingLength: number,
+  utf8Decoder: UTF8Decoder
+) => T;
+
+const packetDecoders = [
+  null,
+  connectDecoder, // 1
+  connackDecoder, // 2
+  publishDecoder, // 3
+  pubackDecoder, // 4
+  pubrecDecoder, // 5
+  pubrelDecoder, // 6
+  pubcompDecoder, // 7
+  subscribeDecoder, // 8
+  subackDecoder, // 9
+  unsubscribeDecoder, // 10
+  unsubackDecoder, // 11
+  pingreqDecoder, // 12
+  pingresDecoder, // 13
+  disconnectDecoder, // 14
+];
 
 export function decode(
   buffer: Uint8Array,
@@ -132,10 +103,10 @@ export function decode(
   }
 
   const id = buffer[0] >> 4;
-  // deno-lint-ignore no-explicit-any
-  const packetType: any = packetTypesById[id];
 
-  if (!packetType) {
+  const decoder = packetDecoders[id];
+
+  if (!decoder) {
     throw new Error(`packet type ${id} cannot be decoded`);
   }
 
@@ -150,7 +121,7 @@ export function decode(
     return null;
   }
 
-  const packet = packetType.decode(
+  const packet = decoder(
     buffer,
     1 + bytesUsedToEncodeLength,
     remainingLength,
@@ -161,7 +132,7 @@ export function decode(
     return null;
   }
 
-  const packetWithLength = <AnyPacketWithLength>packet;
+  const packetWithLength = packet as AnyPacketWithLength;
 
   packetWithLength.length = packetLength;
 

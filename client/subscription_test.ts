@@ -1,6 +1,9 @@
 import { assertEquals } from "https://deno.land/std@0.70.0/testing/asserts.ts";
 import { TestClient } from "./test_client.ts";
-import { SubscribePacket, UnsubscribePacket } from "../packets/mod.ts";
+import type { SubscribePacket, UnsubscribePacket } from "../packets/mod.ts";
+import { encode as encodeConnack } from "../packets/connack.ts";
+import { encode as encodeSuback } from "../packets/suback.ts";
+import { encode as encodeUnsuback } from "../packets/unsuback.ts";
 
 Deno.test("subscribe and unsubscribe called while connected", async () => {
   const client = new TestClient();
@@ -17,11 +20,13 @@ Deno.test("subscribe and unsubscribe called while connected", async () => {
   assertEquals(client.sentPackets[0].type, "connect");
   assertEquals(client.connectionState, "connecting");
 
-  client.testReceivePacket({
-    type: "connack",
-    returnCode: 0,
-    sessionPresent: false,
-  });
+  client.testReceiveBytes(
+    encodeConnack({
+      type: "connack",
+      returnCode: 0,
+      sessionPresent: false,
+    })
+  );
 
   assertEquals(client.connectionState, "connected");
 
@@ -51,11 +56,13 @@ Deno.test("subscribe and unsubscribe called while connected", async () => {
     { topicFilter: "topic1", qos: 0, state: "unacknowledged" },
   ]);
 
-  client.testReceivePacket({
-    type: "suback",
-    id: subscribePacket.id,
-    returnCodes: [0],
-  });
+  client.testReceiveBytes(
+    encodeSuback({
+      type: "suback",
+      id: subscribePacket.id,
+      returnCodes: [0],
+    })
+  );
 
   assertEquals(subscribe1Resolved, false);
   await client.sleep(1);
@@ -108,7 +115,9 @@ Deno.test("subscribe and unsubscribe called while connected", async () => {
     },
   ]);
 
-  client.testReceivePacket({ type: "unsuback", id: unsubscribePacket.id });
+  client.testReceiveBytes(
+    encodeUnsuback({ type: "unsuback", id: unsubscribePacket.id })
+  );
 
   // There are now no subscriptions.
   assertEquals(client.subscriptions, []);
@@ -158,11 +167,13 @@ Deno.test("subscribe called while connecting", async () => {
   assertEquals(client.sentPackets[0].type, "connect");
   assertEquals(client.connectionState, "connecting");
 
-  client.testReceivePacket({
-    type: "connack",
-    returnCode: 0,
-    sessionPresent: false,
-  });
+  client.testReceiveBytes(
+    encodeConnack({
+      type: "connack",
+      returnCode: 0,
+      sessionPresent: false,
+    })
+  );
 
   assertEquals(client.connectionState, "connected");
 
@@ -230,11 +241,13 @@ Deno.test("reconnecting resubscribes", async () => {
   assertEquals(client.sentPackets[0].type, "connect");
   assertEquals(client.connectionState, "connecting");
 
-  client.testReceivePacket({
-    type: "connack",
-    returnCode: 0,
-    sessionPresent: false,
-  });
+  client.testReceiveBytes(
+    encodeConnack({
+      type: "connack",
+      returnCode: 0,
+      sessionPresent: false,
+    })
+  );
 
   assertEquals(client.connectionState, "connected");
 
@@ -258,11 +271,13 @@ Deno.test("reconnecting resubscribes", async () => {
     { topicFilter: "topic1", qos: 0 },
   ]);
 
-  client.testReceivePacket({
-    type: "suback",
-    id: subscribe1Packet.id,
-    returnCodes: [0],
-  });
+  client.testReceiveBytes(
+    encodeSuback({
+      type: "suback",
+      id: subscribe1Packet.id,
+      returnCodes: [0],
+    })
+  );
 
   assertEquals(client.subscriptions, [
     { topicFilter: "topic1", qos: 0, state: "acknowledged", returnCode: 0 },
@@ -289,11 +304,13 @@ Deno.test("reconnecting resubscribes", async () => {
   assertEquals(client.sentPackets[2].type, "connect");
   assertEquals(client.connectionState, "connecting");
 
-  client.testReceivePacket({
-    type: "connack",
-    returnCode: 0,
-    sessionPresent: false,
-  });
+  client.testReceiveBytes(
+    encodeConnack({
+      type: "connack",
+      returnCode: 0,
+      sessionPresent: false,
+    })
+  );
 
   assertEquals(client.connectionState, "connected");
 
@@ -322,11 +339,13 @@ Deno.test(
     assertEquals(client.sentPackets[0].type, "connect");
     assertEquals(client.connectionState, "connecting");
 
-    client.testReceivePacket({
-      type: "connack",
-      returnCode: 0,
-      sessionPresent: false,
-    });
+    client.testReceiveBytes(
+      encodeConnack({
+        type: "connack",
+        returnCode: 0,
+        sessionPresent: false,
+      })
+    );
 
     assertEquals(client.connectionState, "connected");
 
@@ -351,11 +370,13 @@ Deno.test(
       { topicFilter: "topic1", qos: 0 },
     ]);
 
-    client.testReceivePacket({
-      type: "suback",
-      id: subscribe1Packet.id,
-      returnCodes: [0],
-    });
+    client.testReceiveBytes(
+      encodeSuback({
+        type: "suback",
+        id: subscribe1Packet.id,
+        returnCodes: [0],
+      })
+    );
 
     assertEquals(client.subscriptions, [
       { topicFilter: "topic1", qos: 0, state: "acknowledged", returnCode: 0 },
@@ -383,11 +404,13 @@ Deno.test(
     assertEquals(client.sentPackets[2].type, "connect");
     assertEquals(client.connectionState, "connecting");
 
-    client.testReceivePacket({
-      type: "connack",
-      returnCode: 0,
-      sessionPresent: true,
-    });
+    client.testReceiveBytes(
+      encodeConnack({
+        type: "connack",
+        returnCode: 0,
+        sessionPresent: true,
+      })
+    );
 
     assertEquals(client.connectionState, "connected");
 
@@ -401,7 +424,7 @@ Deno.test(
 
     // But it doesn't get sent.
     assertEquals(client.sentPackets.length, 3);
-  },
+  }
 );
 
 Deno.test(
@@ -420,11 +443,13 @@ Deno.test(
     assertEquals(client.sentPackets[0].type, "connect");
     assertEquals(client.connectionState, "connecting");
 
-    client.testReceivePacket({
-      type: "connack",
-      returnCode: 0,
-      sessionPresent: false,
-    });
+    client.testReceiveBytes(
+      encodeConnack({
+        type: "connack",
+        returnCode: 0,
+        sessionPresent: false,
+      })
+    );
 
     assertEquals(client.connectionState, "connected");
 
@@ -449,11 +474,13 @@ Deno.test(
       { topicFilter: "topic1", qos: 0 },
     ]);
 
-    client.testReceivePacket({
-      type: "suback",
-      id: subscribe1Packet.id,
-      returnCodes: [0],
-    });
+    client.testReceiveBytes(
+      encodeSuback({
+        type: "suback",
+        id: subscribe1Packet.id,
+        returnCodes: [0],
+      })
+    );
 
     assertEquals(client.subscriptions, [
       { topicFilter: "topic1", qos: 0, state: "acknowledged", returnCode: 0 },
@@ -483,7 +510,7 @@ Deno.test(
     ]);
 
     assertEquals(unsubscribe1Result[0], topic1Subscription);
-  },
+  }
 );
 
 Deno.test(
@@ -502,11 +529,13 @@ Deno.test(
     assertEquals(client.sentPackets[0].type, "connect");
     assertEquals(client.connectionState, "connecting");
 
-    client.testReceivePacket({
-      type: "connack",
-      returnCode: 0,
-      sessionPresent: false,
-    });
+    client.testReceiveBytes(
+      encodeConnack({
+        type: "connack",
+        returnCode: 0,
+        sessionPresent: false,
+      })
+    );
 
     assertEquals(client.connectionState, "connected");
 
@@ -531,11 +560,13 @@ Deno.test(
       { topicFilter: "topic1", qos: 0 },
     ]);
 
-    client.testReceivePacket({
-      type: "suback",
-      id: subscribe1Packet.id,
-      returnCodes: [0],
-    });
+    client.testReceiveBytes(
+      encodeSuback({
+        type: "suback",
+        id: subscribe1Packet.id,
+        returnCodes: [0],
+      })
+    );
 
     assertEquals(client.subscriptions, [
       { topicFilter: "topic1", qos: 0, state: "acknowledged", returnCode: 0 },
@@ -580,11 +611,13 @@ Deno.test(
     assertEquals(client.sentPackets[2].type, "connect");
     assertEquals(client.connectionState, "connecting");
 
-    client.testReceivePacket({
-      type: "connack",
-      returnCode: 0,
-      sessionPresent: true,
-    });
+    client.testReceiveBytes(
+      encodeConnack({
+        type: "connack",
+        returnCode: 0,
+        sessionPresent: true,
+      })
+    );
 
     assertEquals(client.connectionState, "connected");
 
@@ -607,7 +640,9 @@ Deno.test(
       returnCode: 0,
     });
 
-    client.testReceivePacket({ type: "unsuback", id: unsubscribe1Packet.id });
+    client.testReceiveBytes(
+      encodeUnsuback({ type: "unsuback", id: unsubscribe1Packet.id })
+    );
 
     assertEquals(unsubscribe1Resolved, false);
 
@@ -628,7 +663,7 @@ Deno.test(
     });
 
     assertEquals(unsubscribe1Result[0], topic1Subscription);
-  },
+  }
 );
 
 Deno.test(
@@ -647,11 +682,13 @@ Deno.test(
     assertEquals(client.sentPackets[0].type, "connect");
     assertEquals(client.connectionState, "connecting");
 
-    client.testReceivePacket({
-      type: "connack",
-      returnCode: 0,
-      sessionPresent: false,
-    });
+    client.testReceiveBytes(
+      encodeConnack({
+        type: "connack",
+        returnCode: 0,
+        sessionPresent: false,
+      })
+    );
 
     assertEquals(client.connectionState, "connected");
 
@@ -678,11 +715,13 @@ Deno.test(
       { topicFilter: "topic1", qos: 0 },
     ]);
 
-    client.testReceivePacket({
-      type: "suback",
-      id: subscribe1Packet.id,
-      returnCodes: [0],
-    });
+    client.testReceiveBytes(
+      encodeSuback({
+        type: "suback",
+        id: subscribe1Packet.id,
+        returnCodes: [0],
+      })
+    );
 
     assertEquals(client.subscriptions, [
       { topicFilter: "topic1", qos: 0, state: "acknowledged", returnCode: 0 },
@@ -727,11 +766,13 @@ Deno.test(
     assertEquals(client.sentPackets[2].type, "connect");
     assertEquals(client.connectionState, "connecting");
 
-    client.testReceivePacket({
-      type: "connack",
-      returnCode: 0,
-      sessionPresent: false,
-    });
+    client.testReceiveBytes(
+      encodeConnack({
+        type: "connack",
+        returnCode: 0,
+        sessionPresent: false,
+      })
+    );
 
     assertEquals(client.connectionState, "connected");
 
@@ -767,5 +808,5 @@ Deno.test(
     ]);
 
     assertEquals(unsubscribe1Result[0], topic1Subscription);
-  },
+  }
 );

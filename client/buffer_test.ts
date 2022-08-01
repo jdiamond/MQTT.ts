@@ -1,6 +1,8 @@
 import { assertEquals } from "https://deno.land/std@0.70.0/testing/asserts.ts";
+import { encode as encodeConnack } from "../packets/connack.ts";
+import type { PublishPacket } from "../packets/publish.ts";
+import { encode as encodePublish } from "../packets/publish.ts";
 import { TestClient } from "./test_client.ts";
-import { encode, PublishPacket } from "../packets/mod.ts";
 
 Deno.test("client can receive one byte at a time", async () => {
   const client = new TestClient();
@@ -15,36 +17,39 @@ Deno.test("client can receive one byte at a time", async () => {
   assertEquals(client.sentPackets[0].type, "connect");
   assertEquals(client.connectionState, "connecting");
 
-  client.testReceivePacket(
-    {
+  client.testReceiveBytes(
+    encodeConnack({
       type: "connack",
       returnCode: 0,
       sessionPresent: false,
-    },
-    { trickle: true },
+    }),
+    { trickle: true }
   );
 
   assertEquals(client.receivedPackets[0].type, "connack");
   assertEquals(client.connectionState, "connected");
 
-  client.testReceivePacket(
-    {
-      type: "publish",
-      topic: "test",
-      payload: "test",
-    },
-    { trickle: true },
+  client.testReceiveBytes(
+    encodePublish(
+      {
+        type: "publish",
+        topic: "test",
+        payload: "test",
+      },
+      new TextEncoder()
+    ),
+    { trickle: true }
   );
 
   assertEquals(client.receivedPackets[1].type, "publish");
 
-  const bytes = encode(
+  const bytes = encodePublish(
     {
       type: "publish",
       topic: "test2",
       payload: "test2",
     },
-    new TextEncoder(),
+    new TextEncoder()
   );
 
   // Receive all but the last byte:
@@ -71,31 +76,33 @@ Deno.test("client can receive bytes for multiple packets at once", async () => {
   assertEquals(client.sentPackets[0].type, "connect");
   assertEquals(client.connectionState, "connecting");
 
-  client.testReceivePacket({
-    type: "connack",
-    returnCode: 0,
-    sessionPresent: false,
-  });
+  client.testReceiveBytes(
+    encodeConnack({
+      type: "connack",
+      returnCode: 0,
+      sessionPresent: false,
+    })
+  );
 
   assertEquals(client.receivedPackets[0].type, "connack");
   assertEquals(client.connectionState, "connected");
 
   const bytes = Uint8Array.from([
-    ...encode(
+    ...encodePublish(
       {
         type: "publish",
         topic: "topic1",
         payload: "payload1",
       },
-      new TextEncoder(),
+      new TextEncoder()
     ),
-    ...encode(
+    ...encodePublish(
       {
         type: "publish",
         topic: "topic2",
         payload: "payload2",
       },
-      new TextEncoder(),
+      new TextEncoder()
     ),
   ]);
 

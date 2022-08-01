@@ -1,5 +1,6 @@
 import { assertEquals } from "https://deno.land/std@0.70.0/testing/asserts.ts";
-import { decode, encode } from "./mod.ts";
+import type { UnsubscribePacket } from "./unsubscribe.ts";
+import { decode, encode } from "./unsubscribe.ts";
 
 Deno.test("encodeUnsubscribePacket", function encodeUnsubscribePacket() {
   assertEquals(
@@ -9,7 +10,7 @@ Deno.test("encodeUnsubscribePacket", function encodeUnsubscribePacket() {
         id: 1,
         topicFilters: ["a/b", "c/d"],
       },
-      new TextEncoder(),
+      new TextEncoder()
     ),
     [
       // fixedHeader
@@ -29,12 +30,12 @@ Deno.test("encodeUnsubscribePacket", function encodeUnsubscribePacket() {
       99, // 'c'
       47, // '/'
       100, // 'd'
-    ],
+    ]
   );
 });
 
 Deno.test("decodeUnsubscribePacket", function decodeUnsubscribePacket() {
-  assertEquals(
+  assertEquals<UnsubscribePacket>(
     decode(
       Uint8Array.from([
         // fixedHeader
@@ -55,13 +56,14 @@ Deno.test("decodeUnsubscribePacket", function decodeUnsubscribePacket() {
         47, // '/'
         100, // 'd'
       ]),
-      new TextDecoder(),
+      2,
+      12,
+      new TextDecoder()
     ),
     {
       type: "unsubscribe",
       id: 1,
       topicFilters: ["a/b", "c/d"],
-      length: 14,
-    },
+    }
   );
 });
