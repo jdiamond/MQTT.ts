@@ -9,19 +9,19 @@ export default {
     const packetType = 9;
     const flags = 0;
 
-    return [
+    return Uint8Array.from([
       (packetType << 4) + flags,
       2 + packet.returnCodes.length,
       packet.id >> 8,
       packet.id & 0xff,
       ...packet.returnCodes,
-    ];
+    ]);
   },
 
   decode(
     buffer: Uint8Array,
     remainingStart: number,
-    _remainingLength: number,
+    _remainingLength: number
   ): SubackPacket {
     const idStart = remainingStart;
     const id = (buffer[idStart] << 8) + buffer[idStart + 1];

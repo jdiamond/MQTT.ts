@@ -9,18 +9,18 @@ export default {
     const packetType = 2;
     const flags = 0;
 
-    return [
+    return Uint8Array.from([
       (packetType << 4) + flags,
       2,
       packet.sessionPresent ? 1 : 0,
       packet.returnCode || 0,
-    ];
+    ]);
   },
 
   decode(
     buffer: Uint8Array,
     _remainingStart: number,
-    _remainingLength: number,
+    _remainingLength: number
   ): ConnackPacket {
     const sessionPresent = !!(buffer[2] & 1);
     const returnCode = buffer[3];

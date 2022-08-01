@@ -50,22 +50,51 @@ export type {
   UnsubscribePacket,
 };
 
-const packetTypesByName = {
-  connect,
-  connack,
-  publish,
-  puback,
-  pubrec,
-  pubrel,
-  pubcomp,
-  subscribe,
-  suback,
-  unsubscribe,
-  unsuback,
-  pingreq,
-  pingres,
-  disconnect,
+type PacketTypes = {
+  connect: ConnectPacket;
+  connack: ConnackPacket;
+  publish: PublishPacket;
+  puback: PubackPacket;
+  pubrec: PubrecPacket;
+  pubrel: PubrelPacket;
+  pubcomp: PubcompPacket;
+  subscribe: SubscribePacket;
+  suback: SubackPacket;
+  unsubscribe: UnsubscribePacket;
+  unsuback: UnsubackPacket;
+  pingreq: PingreqPacket;
+  pingres: PingresPacket;
+  disconnect: DisconnectPacket;
 };
+
+type Encoder<T> = (packet: T, utf8Encoder: UTF8Encoder) => Uint8Array;
+
+type Encoders = {
+  [K in keyof PacketTypes]: Encoder<PacketTypes[K]>;
+};
+
+const encoders: Encoders = {
+  connect: connect.encode,
+  connack: connack.encode,
+  publish: publish.encode,
+  puback: puback.encode,
+  pubrec: pubrec.encode,
+  pubrel: pubrel.encode,
+  pubcomp: pubcomp.encode,
+  subscribe: subscribe.encode,
+  suback: suback.encode,
+  unsubscribe: unsubscribe.encode,
+  unsuback: unsuback.encode,
+  pingreq: pingreq.encode,
+  pingres: pingres.encode,
+  disconnect: disconnect.encode,
+};
+
+function getEncoder<K extends keyof PacketTypes>(
+  type: K
+): Encoder<PacketTypes[K]> {
+  return encoders[type];
+}
 
 const packetTypesById = [
   null,
@@ -87,22 +116,16 @@ const packetTypesById = [
 
 export function encode<T extends AnyPacket>(
   packet: T,
-  utf8Encoder: UTF8Encoder,
+  utf8Encoder: UTF8Encoder
 ): Uint8Array {
-  const name = packet.type;
-  // deno-lint-ignore no-explicit-any
-  const packetType: any = packetTypesByName[name];
+  const encoder = getEncoder(packet.type);
 
-  if (!packetType) {
-    throw new Error(`packet type ${name} cannot be encoded`);
-  }
-
-  return Uint8Array.from(packetType.encode(packet, utf8Encoder));
+  return encoder(packet, utf8Encoder);
 }
 
 export function decode(
   buffer: Uint8Array,
-  utf8Decoder: UTF8Decoder,
+  utf8Decoder: UTF8Decoder
 ): AnyPacketWithLength | null {
   if (buffer.length < 2) {
     return null;
@@ -118,7 +141,7 @@ export function decode(
 
   const { length: remainingLength, bytesUsedToEncodeLength } = decodeLength(
     buffer,
-    1,
+    1
   );
 
   const packetLength = 1 + bytesUsedToEncodeLength + remainingLength;
@@ -131,14 +154,14 @@ export function decode(
     buffer,
     1 + bytesUsedToEncodeLength,
     remainingLength,
-    utf8Decoder,
+    utf8Decoder
   );
 
   if (!packet) {
     return null;
   }
 
-  const packetWithLength = <AnyPacketWithLength> packet;
+  const packetWithLength = <AnyPacketWithLength>packet;
 
   packetWithLength.length = packetLength;
 

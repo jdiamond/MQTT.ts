@@ -36,14 +36,14 @@ export default {
       ...encodeLength(variableHeader.length + payload.length),
     ];
 
-    return [...fixedHeader, ...variableHeader, ...payload];
+    return Uint8Array.from([...fixedHeader, ...variableHeader, ...payload]);
   },
 
   decode(
     buffer: Uint8Array,
     remainingStart: number,
     _remainingLength: number,
-    utf8Decoder: UTF8Decoder,
+    utf8Decoder: UTF8Decoder
   ): SubscribePacket {
     const idStart = remainingStart;
     const id = (buffer[idStart] << 8) + buffer[idStart + 1];
@@ -51,7 +51,7 @@ export default {
     const subscriptionsStart = idStart + 2;
     const subscriptions: Subscription[] = [];
 
-    for (let i = subscriptionsStart; i < buffer.length;) {
+    for (let i = subscriptionsStart; i < buffer.length; ) {
       const topicFilter = decodeUTF8String(buffer, i, utf8Decoder);
       i += topicFilter.length;
 
