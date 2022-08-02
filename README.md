@@ -97,11 +97,13 @@ brew install mosquitto
 /usr/local/sbin/mosquitto -c mosquitto-mac.conf
 ```
 
-To run a local broker on Linux:
+To run a local broker on Ubuntu in WSL2:
 
 ```
+sudo apt-add-repository ppa:mosquitto-dev/mosquitto-ppa
+sudo apt update
 sudo apt install mosquitto
-mosquitto -c mosquitto-linux.conf
+mosquitto -c mosquitto-wsl2-ubuntu.conf
 ```
 
 To test publishing and subscribing to your local broker, run these commands in separate shells:
