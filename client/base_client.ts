@@ -20,7 +20,10 @@ import { decode } from "../packets/mod.ts";
 import { encode as pingreqEncoder } from "../packets/pingreq.ts";
 import { encode as pubackEncoder } from "../packets/puback.ts";
 import { encode as pubcompEncoder } from "../packets/pubcomp.ts";
-import { encode as publishEncoder } from "../packets/publish.ts";
+import {
+  encode as publishEncoder,
+  PublishPayload,
+} from "../packets/publish.ts";
 import { encode as pubrecEncoder } from "../packets/pubrec.ts";
 import { encode as pubrelEncoder } from "../packets/pubrel.ts";
 import { encode as subscribeEncoder } from "../packets/subscribe.ts";
@@ -310,8 +313,7 @@ export abstract class Client {
 
   public publish(
     topic: string,
-    // deno-lint-ignore no-explicit-any
-    payload: any,
+    payload: PublishPayload,
     options?: PublishOptions
   ): Promise<void> {
     const dup = (options && options.dup) || false;
@@ -321,11 +323,11 @@ export abstract class Client {
 
     const packet: PublishPacket = {
       type: "publish",
-      dup,
-      qos,
-      retain,
       topic,
       payload,
+      dup,
+      retain,
+      qos,
       id,
     };
 

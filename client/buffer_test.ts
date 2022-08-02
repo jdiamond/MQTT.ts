@@ -35,6 +35,10 @@ Deno.test("client can receive one byte at a time", async () => {
         type: "publish",
         topic: "test",
         payload: "test",
+        dup: false,
+        retain: false,
+        qos: 0,
+        id: 0,
       },
       new TextEncoder()
     ),
@@ -48,6 +52,10 @@ Deno.test("client can receive one byte at a time", async () => {
       type: "publish",
       topic: "test2",
       payload: "test2",
+      dup: false,
+      retain: false,
+      qos: 0,
+      id: 0,
     },
     new TextEncoder()
   );
@@ -93,6 +101,10 @@ Deno.test("client can receive bytes for multiple packets at once", async () => {
         type: "publish",
         topic: "topic1",
         payload: "payload1",
+        dup: false,
+        retain: false,
+        qos: 0,
+        id: 0,
       },
       new TextEncoder()
     ),
@@ -101,6 +113,10 @@ Deno.test("client can receive bytes for multiple packets at once", async () => {
         type: "publish",
         topic: "topic2",
         payload: "payload2",
+        dup: false,
+        retain: false,
+        qos: 0,
+        id: 0,
       },
       new TextEncoder()
     ),

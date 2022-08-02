@@ -479,9 +479,10 @@ Deno.test(
           type: "publish",
           topic: "topic1",
           payload: "payload1",
+          dup: false,
+          retain: false,
           qos: 2,
           id: 12,
-          dup: false,
         },
         new TextEncoder()
       )
@@ -522,9 +523,10 @@ Deno.test(
           type: "publish",
           topic: "topic1",
           payload: "payload1",
+          dup: true,
+          retain: false,
           qos: 2,
           id: 12,
-          dup: true,
         },
         new TextEncoder()
       )
@@ -557,9 +559,10 @@ Deno.test(
           type: "publish",
           topic: "topic2",
           payload: "payload2",
+          dup: true,
+          retain: false,
           qos: 2,
           id: 13,
-          dup: true,
         },
         new TextEncoder()
       )

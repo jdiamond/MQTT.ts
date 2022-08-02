@@ -11,6 +11,10 @@ Deno.test("encodePublishPacket", function encodePublishPacket() {
         type: "publish",
         topic: "a/b",
         payload: "payload",
+        dup: false,
+        retain: false,
+        qos: 0,
+        id: 0,
       },
       new TextEncoder()
     ),

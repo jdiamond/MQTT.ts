@@ -9,13 +9,14 @@ import {
 export interface PublishPacket {
   type: "publish";
   topic: string;
-  // deno-lint-ignore no-explicit-any
-  payload: any;
-  dup?: boolean;
-  retain?: boolean;
-  qos?: 0 | 1 | 2;
-  id?: number;
+  payload: PublishPayload;
+  dup: boolean;
+  retain: boolean;
+  qos: 0 | 1 | 2;
+  id: number;
 }
+
+export type PublishPayload = string | Uint8Array;
 
 export function encode(packet: PublishPacket, utf8Encoder: UTF8Encoder) {
   const packetType = 3;
