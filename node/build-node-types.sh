@@ -12,7 +12,8 @@ cp ./node_client.ts src/node
 # Strip off the .ts extensions from the imports.
 find src -type f -print | while read f; do
   echo $f
-  sed -i "" -e "s/\\.ts';$/';/" $f
+  sed -i.old -e "s/\\.ts\";$/\";/" $f
+  rm $f.old
 done
 
 # Generate the .d.ts file.

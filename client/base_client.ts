@@ -256,7 +256,7 @@ export abstract class Client {
     new Map();
 
   private timers: {
-    [key: string]: number | undefined;
+    [key: string]: ReturnType<typeof setTimeout>;
   } = {};
 
   protected log: (msg: string, ...args: unknown[]) => void;
