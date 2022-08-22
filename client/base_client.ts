@@ -1019,7 +1019,7 @@ export abstract class Client {
   }
 
   protected startReconnectTimer() {
-    const options = this.options;
+    const options = this.options || {};
 
     let reconnectOptions;
     let defaultOptions;
