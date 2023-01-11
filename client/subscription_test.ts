@@ -25,7 +25,7 @@ Deno.test("subscribe and unsubscribe called while connected", async () => {
       type: "connack",
       returnCode: 0,
       sessionPresent: false,
-    })
+    }),
   );
 
   assertEquals(client.connectionState, "connected");
@@ -61,7 +61,7 @@ Deno.test("subscribe and unsubscribe called while connected", async () => {
       type: "suback",
       id: subscribePacket.id,
       returnCodes: [0],
-    })
+    }),
   );
 
   assertEquals(subscribe1Resolved, false);
@@ -116,7 +116,7 @@ Deno.test("subscribe and unsubscribe called while connected", async () => {
   ]);
 
   client.testReceiveBytes(
-    encodeUnsuback({ type: "unsuback", id: unsubscribePacket.id })
+    encodeUnsuback({ type: "unsuback", id: unsubscribePacket.id }),
   );
 
   // There are now no subscriptions.
@@ -172,7 +172,7 @@ Deno.test("subscribe called while connecting", async () => {
       type: "connack",
       returnCode: 0,
       sessionPresent: false,
-    })
+    }),
   );
 
   assertEquals(client.connectionState, "connected");
@@ -246,7 +246,7 @@ Deno.test("reconnecting resubscribes", async () => {
       type: "connack",
       returnCode: 0,
       sessionPresent: false,
-    })
+    }),
   );
 
   assertEquals(client.connectionState, "connected");
@@ -276,7 +276,7 @@ Deno.test("reconnecting resubscribes", async () => {
       type: "suback",
       id: subscribe1Packet.id,
       returnCodes: [0],
-    })
+    }),
   );
 
   assertEquals(client.subscriptions, [
@@ -309,7 +309,7 @@ Deno.test("reconnecting resubscribes", async () => {
       type: "connack",
       returnCode: 0,
       sessionPresent: false,
-    })
+    }),
   );
 
   assertEquals(client.connectionState, "connected");
@@ -344,7 +344,7 @@ Deno.test(
         type: "connack",
         returnCode: 0,
         sessionPresent: false,
-      })
+      }),
     );
 
     assertEquals(client.connectionState, "connected");
@@ -375,7 +375,7 @@ Deno.test(
         type: "suback",
         id: subscribe1Packet.id,
         returnCodes: [0],
-      })
+      }),
     );
 
     assertEquals(client.subscriptions, [
@@ -409,7 +409,7 @@ Deno.test(
         type: "connack",
         returnCode: 0,
         sessionPresent: true,
-      })
+      }),
     );
 
     assertEquals(client.connectionState, "connected");
@@ -424,7 +424,7 @@ Deno.test(
 
     // But it doesn't get sent.
     assertEquals(client.sentPackets.length, 3);
-  }
+  },
 );
 
 Deno.test(
@@ -448,7 +448,7 @@ Deno.test(
         type: "connack",
         returnCode: 0,
         sessionPresent: false,
-      })
+      }),
     );
 
     assertEquals(client.connectionState, "connected");
@@ -479,7 +479,7 @@ Deno.test(
         type: "suback",
         id: subscribe1Packet.id,
         returnCodes: [0],
-      })
+      }),
     );
 
     assertEquals(client.subscriptions, [
@@ -510,7 +510,7 @@ Deno.test(
     ]);
 
     assertEquals(unsubscribe1Result[0], topic1Subscription);
-  }
+  },
 );
 
 Deno.test(
@@ -534,7 +534,7 @@ Deno.test(
         type: "connack",
         returnCode: 0,
         sessionPresent: false,
-      })
+      }),
     );
 
     assertEquals(client.connectionState, "connected");
@@ -565,7 +565,7 @@ Deno.test(
         type: "suback",
         id: subscribe1Packet.id,
         returnCodes: [0],
-      })
+      }),
     );
 
     assertEquals(client.subscriptions, [
@@ -616,7 +616,7 @@ Deno.test(
         type: "connack",
         returnCode: 0,
         sessionPresent: true,
-      })
+      }),
     );
 
     assertEquals(client.connectionState, "connected");
@@ -641,7 +641,7 @@ Deno.test(
     });
 
     client.testReceiveBytes(
-      encodeUnsuback({ type: "unsuback", id: unsubscribe1Packet.id })
+      encodeUnsuback({ type: "unsuback", id: unsubscribe1Packet.id }),
     );
 
     assertEquals(unsubscribe1Resolved, false);
@@ -663,7 +663,7 @@ Deno.test(
     });
 
     assertEquals(unsubscribe1Result[0], topic1Subscription);
-  }
+  },
 );
 
 Deno.test(
@@ -687,7 +687,7 @@ Deno.test(
         type: "connack",
         returnCode: 0,
         sessionPresent: false,
-      })
+      }),
     );
 
     assertEquals(client.connectionState, "connected");
@@ -720,7 +720,7 @@ Deno.test(
         type: "suback",
         id: subscribe1Packet.id,
         returnCodes: [0],
-      })
+      }),
     );
 
     assertEquals(client.subscriptions, [
@@ -771,7 +771,7 @@ Deno.test(
         type: "connack",
         returnCode: 0,
         sessionPresent: false,
-      })
+      }),
     );
 
     assertEquals(client.connectionState, "connected");
@@ -808,5 +808,5 @@ Deno.test(
     ]);
 
     assertEquals(unsubscribe1Result[0], topic1Subscription);
-  }
+  },
 );

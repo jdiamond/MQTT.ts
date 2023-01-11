@@ -13,7 +13,7 @@ Deno.test("encodeSubscribePacket", function encodeSubscribePacket() {
           { topicFilter: "c/d", qos: 1 },
         ],
       },
-      new TextEncoder()
+      new TextEncoder(),
     ),
     [
       // fixedHeader
@@ -35,7 +35,7 @@ Deno.test("encodeSubscribePacket", function encodeSubscribePacket() {
       47, // '/'
       100, // 'd'
       1, // qos
-    ]
+    ],
   );
 });
 
@@ -65,7 +65,7 @@ Deno.test("decodeSubscribePacket", function decodeSubscribePacket() {
       ]),
       2,
       14,
-      new TextDecoder()
+      new TextDecoder(),
     ),
     {
       type: "subscribe",
@@ -74,6 +74,6 @@ Deno.test("decodeSubscribePacket", function decodeSubscribePacket() {
         { topicFilter: "a/b", qos: 0 },
         { topicFilter: "c/d", qos: 1 },
       ],
-    }
+    },
   );
 });

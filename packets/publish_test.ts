@@ -16,7 +16,7 @@ Deno.test("encodePublishPacket", function encodePublishPacket() {
         qos: 0,
         id: 0,
       },
-      new TextEncoder()
+      new TextEncoder(),
     ),
     [
       // fixedHeader
@@ -36,7 +36,7 @@ Deno.test("encodePublishPacket", function encodePublishPacket() {
       111, // 'o'
       97, // 'a'
       100, // 'd'
-    ]
+    ],
   );
 });
 
@@ -64,7 +64,7 @@ Deno.test("decodePublishPacket", function decodePublishPacket() {
       ]),
       2,
       12,
-      utf8Decoder
+      utf8Decoder,
     ),
     {
       type: "publish",
@@ -82,7 +82,7 @@ Deno.test("decodePublishPacket", function decodePublishPacket() {
         97, // 'a'
         100, // 'd'
       ]),
-    }
+    },
   );
 });
 
@@ -115,7 +115,7 @@ Deno.test(
         ]),
         2,
         12,
-        utf8Decoder
+        utf8Decoder,
       ),
       {
         type: "publish",
@@ -133,7 +133,7 @@ Deno.test(
           97, // 'a'
           100, // 'd'
         ]),
-      }
+      },
     );
-  }
+  },
 );

@@ -20,7 +20,7 @@ Deno.test("connect/disconnect", async () => {
       type: "connack",
       returnCode: 0,
       sessionPresent: false,
-    })
+    }),
   );
 
   assertEquals(client.connectionState, "connected");
@@ -109,7 +109,7 @@ Deno.test(
 
     // But no disconnect packet should have been written.
     assertEquals(client.sentPackets.length, 0);
-  }
+  },
 );
 
 Deno.test("waiting for connack times out", async () => {
@@ -212,7 +212,7 @@ Deno.test(
         type: "connack",
         returnCode: 0,
         sessionPresent: false,
-      })
+      }),
     );
 
     assertEquals(client.connectionState, "connected");
@@ -223,5 +223,5 @@ Deno.test(
 
     assertEquals(client.connectionState, "connected");
     assertEquals(connectResolved, true);
-  }
+  },
 );

@@ -23,8 +23,7 @@ export function encode(packet: PublishPacket, utf8Encoder: UTF8Encoder) {
 
   const qos = packet.qos || 0;
 
-  const flags =
-    (packet.dup ? 8 : 0) +
+  const flags = (packet.dup ? 8 : 0) +
     (qos & 2 ? 4 : 0) +
     (qos & 1 ? 2 : 0) +
     (packet.retain ? 1 : 0);
@@ -57,7 +56,7 @@ export function decode(
   buffer: Uint8Array,
   remainingStart: number,
   remainingLength: number,
-  utf8Decoder: UTF8Decoder
+  utf8Decoder: UTF8Decoder,
 ): PublishPacket {
   const flags = buffer[0] & 0x0f;
 

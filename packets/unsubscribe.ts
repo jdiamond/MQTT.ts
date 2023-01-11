@@ -36,7 +36,7 @@ export function decode(
   buffer: Uint8Array,
   remainingStart: number,
   _remainingLength: number,
-  utf8Decoder: UTF8Decoder
+  utf8Decoder: UTF8Decoder,
 ): UnsubscribePacket {
   const idStart = remainingStart;
   const id = (buffer[idStart] << 8) + buffer[idStart + 1];
@@ -44,7 +44,7 @@ export function decode(
   const topicFiltersStart = idStart + 2;
   const topicFilters: string[] = [];
 
-  for (let i = topicFiltersStart; i < buffer.length; ) {
+  for (let i = topicFiltersStart; i < buffer.length;) {
     const topicFilter = decodeUTF8String(buffer, i, utf8Decoder);
     i += topicFilter.length;
 

@@ -18,7 +18,7 @@ export function encode(packet: PubrelPacket) {
 export function decode(
   buffer: Uint8Array,
   _remainingStart: number,
-  remainingLength: number
+  remainingLength: number,
 ): PubrelPacket {
   if (remainingLength !== 2) {
     throw new Error("pubrel packets must have a length of 2");

@@ -18,7 +18,7 @@ export function encode(packet: PubcompPacket) {
 export function decode(
   buffer: Uint8Array,
   _remainingStart: number,
-  remainingLength: number
+  remainingLength: number,
 ): PubcompPacket {
   if (remainingLength !== 2) {
     throw new Error("pubcomp packets must have a length of 2");

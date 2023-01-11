@@ -10,7 +10,7 @@ Deno.test("encodeUnsubscribePacket", function encodeUnsubscribePacket() {
         id: 1,
         topicFilters: ["a/b", "c/d"],
       },
-      new TextEncoder()
+      new TextEncoder(),
     ),
     [
       // fixedHeader
@@ -30,7 +30,7 @@ Deno.test("encodeUnsubscribePacket", function encodeUnsubscribePacket() {
       99, // 'c'
       47, // '/'
       100, // 'd'
-    ]
+    ],
   );
 });
 
@@ -58,12 +58,12 @@ Deno.test("decodeUnsubscribePacket", function decodeUnsubscribePacket() {
       ]),
       2,
       12,
-      new TextDecoder()
+      new TextDecoder(),
     ),
     {
       type: "unsubscribe",
       id: 1,
       topicFilters: ["a/b", "c/d"],
-    }
+    },
   );
 });

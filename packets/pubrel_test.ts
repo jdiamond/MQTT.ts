@@ -18,7 +18,7 @@ Deno.test("encodePubrelPacket", function encodePubrelPacket() {
       // variableHeader
       5, // id MSB
       57, // id LSB
-    ]
+    ],
   );
 });
 
@@ -34,12 +34,12 @@ Deno.test("decodePubrelPacket", function decodePubrelPacket() {
         57, // id LSB
       ]),
       2,
-      2
+      2,
     ),
     {
       type: "pubrel",
       id: 1337,
-    }
+    },
   );
 });
 
