@@ -15,7 +15,7 @@ Deno.test("encodeUnsubackPacket", function encodeUnsubackPacket() {
       // variableHeader
       0, // id MSB
       1, // id LSB
-    ]
+    ],
   );
 });
 
@@ -31,11 +31,11 @@ Deno.test("decodeUnsubackPacket", function decodeUnsubackPacket() {
         1, // id LSB
       ]),
       2,
-      2
+      2,
     ),
     {
       type: "unsuback",
       id: 1,
-    }
+    },
   );
 });

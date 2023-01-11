@@ -42,7 +42,7 @@ export function decode(
   buffer: Uint8Array,
   remainingStart: number,
   _remainingLength: number,
-  utf8Decoder: UTF8Decoder
+  utf8Decoder: UTF8Decoder,
 ): SubscribePacket {
   const idStart = remainingStart;
   const id = (buffer[idStart] << 8) + buffer[idStart + 1];
@@ -50,7 +50,7 @@ export function decode(
   const subscriptionsStart = idStart + 2;
   const subscriptions: Subscription[] = [];
 
-  for (let i = subscriptionsStart; i < buffer.length; ) {
+  for (let i = subscriptionsStart; i < buffer.length;) {
     const topicFilter = decodeUTF8String(buffer, i, utf8Decoder);
     i += topicFilter.length;
 

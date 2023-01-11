@@ -66,14 +66,14 @@ export type {
 
 export type PacketEncoder<T> = (
   packet: T,
-  utf8Encoder: UTF8Encoder
+  utf8Encoder: UTF8Encoder,
 ) => Uint8Array;
 
 export type PacketDecoder<T> = (
   packet: Uint8Array,
   remainingStart: number,
   remainingLength: number,
-  utf8Decoder: UTF8Decoder
+  utf8Decoder: UTF8Decoder,
 ) => T;
 
 const packetDecoders = [
@@ -96,7 +96,7 @@ const packetDecoders = [
 
 export function decode(
   buffer: Uint8Array,
-  utf8Decoder: UTF8Decoder
+  utf8Decoder: UTF8Decoder,
 ): AnyPacketWithLength | null {
   if (buffer.length < 2) {
     return null;
@@ -112,7 +112,7 @@ export function decode(
 
   const { length: remainingLength, bytesUsedToEncodeLength } = decodeLength(
     buffer,
-    1
+    1,
   );
 
   const packetLength = 1 + bytesUsedToEncodeLength + remainingLength;
@@ -125,7 +125,7 @@ export function decode(
     buffer,
     1 + bytesUsedToEncodeLength,
     remainingLength,
-    utf8Decoder
+    utf8Decoder,
   );
 
   if (!packet) {

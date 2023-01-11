@@ -20,7 +20,7 @@ export function encode(packet: SubackPacket) {
 export function decode(
   buffer: Uint8Array,
   remainingStart: number,
-  _remainingLength: number
+  _remainingLength: number,
 ): SubackPacket {
   const idStart = remainingStart;
   const id = (buffer[idStart] << 8) + buffer[idStart + 1];

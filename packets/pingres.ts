@@ -9,7 +9,7 @@ export function encode(_packet: PingresPacket) {
 export function decode(
   _buffer: Uint8Array,
   _remainingStart: number,
-  _remainingLength: number
+  _remainingLength: number,
 ): PingresPacket {
   return {
     type: "pingres",

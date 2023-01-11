@@ -18,7 +18,7 @@ export function encode(packet: PubackPacket) {
 export function decode(
   buffer: Uint8Array,
   _remainingStart: number,
-  remainingLength: number
+  remainingLength: number,
 ): PubackPacket {
   if (remainingLength !== 2) {
     throw new Error("puback packets must have a length of 2");

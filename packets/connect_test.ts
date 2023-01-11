@@ -13,7 +13,7 @@ Deno.test(
           type: "connect",
           clientId: "id",
         },
-        utf8Encoder
+        utf8Encoder,
       ),
       [
         // fixedHeader
@@ -36,9 +36,9 @@ Deno.test(
         2, // length LSB
         105, // 'i'
         100, // 'd'
-      ]
+      ],
     );
-  }
+  },
 );
 
 Deno.test(
@@ -51,7 +51,7 @@ Deno.test(
           clientId: "id",
           clean: false,
         },
-        utf8Encoder
+        utf8Encoder,
       ),
       [
         // fixedHeader
@@ -74,9 +74,9 @@ Deno.test(
         2, // length LSB
         105, // 'i'
         100, // 'd'
-      ]
+      ],
     );
-  }
+  },
 );
 
 Deno.test(
@@ -89,7 +89,7 @@ Deno.test(
           clientId: "id",
           keepAlive: 300,
         },
-        utf8Encoder
+        utf8Encoder,
       ),
       [
         // fixedHeader
@@ -112,9 +112,9 @@ Deno.test(
         2, // length LSB
         105, // 'i'
         100, // 'd'
-      ]
+      ],
     );
-  }
+  },
 );
 
 Deno.test(
@@ -128,7 +128,7 @@ Deno.test(
           username: "user",
           password: "pass",
         },
-        utf8Encoder
+        utf8Encoder,
       ),
       [
         // fixedHeader
@@ -165,9 +165,9 @@ Deno.test(
         97, // 'a'
         115, // 's'
         115, // 's'
-      ]
+      ],
     );
-  }
+  },
 );
 
 Deno.test(
@@ -213,7 +213,7 @@ Deno.test(
         ]),
         2,
         26,
-        new TextDecoder()
+        new TextDecoder(),
       ),
       {
         type: "connect",
@@ -225,7 +225,7 @@ Deno.test(
         will: undefined,
         clean: true,
         keepAlive: 0,
-      }
+      },
     );
-  }
+  },
 );

@@ -31,7 +31,7 @@ Deno.test("publish qos 0 while connected", async () => {
       type: "connack",
       returnCode: 0,
       sessionPresent: false,
-    })
+    }),
   );
 
   assertEquals(client.connectionState, "connected");
@@ -85,7 +85,7 @@ Deno.test("publish qos 0 while connecting", async () => {
       type: "connack",
       returnCode: 0,
       sessionPresent: false,
-    })
+    }),
   );
 
   assertEquals(client.connectionState, "connected");
@@ -119,7 +119,7 @@ Deno.test("publish qos 1 while connected", async () => {
       type: "connack",
       returnCode: 0,
       sessionPresent: false,
-    })
+    }),
   );
 
   assertEquals(client.connectionState, "connected");
@@ -148,7 +148,7 @@ Deno.test("publish qos 1 while connected", async () => {
   assertEquals(publish1Resolved, false);
 
   client.testReceiveBytes(
-    encodePuback({ type: "puback", id: publish1Packet.id! })
+    encodePuback({ type: "puback", id: publish1Packet.id! }),
   );
 
   await client.sleep(1);
@@ -176,7 +176,7 @@ Deno.test(
         type: "connack",
         returnCode: 0,
         sessionPresent: false,
-      })
+      }),
     );
 
     assertEquals(client.connectionState, "connected");
@@ -223,7 +223,7 @@ Deno.test(
         type: "connack",
         returnCode: 0,
         sessionPresent: false,
-      })
+      }),
     );
 
     assertEquals(client.connectionState, "connected");
@@ -242,7 +242,7 @@ Deno.test(
     assertEquals(publish1Packet2.dup, true);
 
     client.testReceiveBytes(
-      encodePuback({ type: "puback", id: publish1Packet1.id! })
+      encodePuback({ type: "puback", id: publish1Packet1.id! }),
     );
 
     await client.sleep(1);
@@ -266,7 +266,7 @@ Deno.test(
         type: "connack",
         returnCode: 0,
         sessionPresent: false,
-      })
+      }),
     );
 
     assertEquals(client.connectionState, "connected");
@@ -276,7 +276,7 @@ Deno.test(
 
     // ...but no new packets get sent.
     assertEquals(client.sentPackets.length, 5);
-  }
+  },
 );
 
 Deno.test(
@@ -299,7 +299,7 @@ Deno.test(
         type: "connack",
         returnCode: 0,
         sessionPresent: false,
-      })
+      }),
     );
 
     assertEquals(client.connectionState, "connected");
@@ -346,7 +346,7 @@ Deno.test(
         type: "connack",
         returnCode: 0,
         sessionPresent: false,
-      })
+      }),
     );
 
     assertEquals(client.connectionState, "connected");
@@ -365,7 +365,7 @@ Deno.test(
     assertEquals(publish1Packet2.dup, true);
 
     client.testReceiveBytes(
-      encodePubrec({ type: "pubrec", id: publish1Packet1.id! })
+      encodePubrec({ type: "pubrec", id: publish1Packet1.id! }),
     );
 
     await client.sleep(1);
@@ -394,7 +394,7 @@ Deno.test(
         type: "connack",
         returnCode: 0,
         sessionPresent: false,
-      })
+      }),
     );
 
     assertEquals(client.connectionState, "connected");
@@ -408,7 +408,7 @@ Deno.test(
     assertEquals(publish1Resolved, false);
 
     client.testReceiveBytes(
-      encodePubcomp({ type: "pubcomp", id: pubrel1Packet1.id })
+      encodePubcomp({ type: "pubcomp", id: pubrel1Packet1.id }),
     );
 
     await client.sleep(1);
@@ -432,7 +432,7 @@ Deno.test(
         type: "connack",
         returnCode: 0,
         sessionPresent: false,
-      })
+      }),
     );
 
     assertEquals(client.connectionState, "connected");
@@ -442,7 +442,7 @@ Deno.test(
 
     // ...but no new packets get sent.
     assertEquals(client.sentPackets.length, 8);
-  }
+  },
 );
 
 Deno.test(
@@ -468,7 +468,7 @@ Deno.test(
         type: "connack",
         returnCode: 0,
         sessionPresent: false,
-      })
+      }),
     );
 
     assertEquals(client.connectionState, "connected");
@@ -484,8 +484,8 @@ Deno.test(
           qos: 2,
           id: 12,
         },
-        new TextEncoder()
-      )
+        new TextEncoder(),
+      ),
     );
 
     await client.sleep(1);
@@ -512,7 +512,7 @@ Deno.test(
         type: "connack",
         returnCode: 0,
         sessionPresent: false,
-      })
+      }),
     );
 
     assertEquals(client.connectionState, "connected");
@@ -528,8 +528,8 @@ Deno.test(
           qos: 2,
           id: 12,
         },
-        new TextEncoder()
-      )
+        new TextEncoder(),
+      ),
     );
 
     assertEquals(emittedMessages.length, 1);
@@ -544,7 +544,7 @@ Deno.test(
       encodePubrel({
         type: "pubrel",
         id: 12,
-      })
+      }),
     );
 
     await client.sleep(1);
@@ -564,12 +564,12 @@ Deno.test(
           qos: 2,
           id: 13,
         },
-        new TextEncoder()
-      )
+        new TextEncoder(),
+      ),
     );
 
     await client.sleep(1);
 
     assertEquals(emittedMessages.length, 2);
-  }
+  },
 );

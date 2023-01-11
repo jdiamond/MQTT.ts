@@ -19,7 +19,7 @@ Deno.test("encodeSubackPacket", function decodeSubackPacket() {
       // payload
       0,
       1,
-    ]
+    ],
   );
 });
 
@@ -38,12 +38,12 @@ Deno.test("decodeSubackPacket", function decodeSubackPacket() {
         1,
       ]),
       2,
-      4
+      4,
     ),
     {
       type: "suback",
       id: 1,
       returnCodes: [0, 1],
-    }
+    },
   );
 });

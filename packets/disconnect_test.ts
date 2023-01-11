@@ -11,7 +11,7 @@ Deno.test("encodeDisconnectPacket", function encodeDisconnectPacket() {
       // fixedHeader
       224, // packetType + flags
       0, // remainingLength
-    ]
+    ],
   );
 });
 
@@ -24,10 +24,10 @@ Deno.test("decodeDisconnectPacket", function decodeDisconnectPacket() {
         0, // remainingLength
       ]),
       2,
-      0
+      0,
     ),
     {
       type: "disconnect",
-    }
+    },
   );
 });

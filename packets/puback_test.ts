@@ -18,7 +18,7 @@ Deno.test("encodePubackPacket", function encodePubackPacket() {
       // variableHeader
       5, // id MSB
       57, // id LSB
-    ]
+    ],
   );
 });
 
@@ -34,12 +34,12 @@ Deno.test("decodePubackPacket", function decodePubackPacket() {
         57, // id LSB
       ]),
       2,
-      2
+      2,
     ),
     {
       type: "puback",
       id: 1337,
-    }
+    },
   );
 });
 

@@ -12,7 +12,7 @@ export function encode(_packet: DisconnectPacket) {
 export function decode(
   _buffer: Uint8Array,
   _remainingStart: number,
-  _remainingLength: number
+  _remainingLength: number,
 ): DisconnectPacket {
   return {
     type: "disconnect",

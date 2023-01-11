@@ -11,7 +11,7 @@ Deno.test("encodePingresPacket", function encodePingresPacket() {
       // fixedHeader
       0xd0, // packetType + flags
       0, // remainingLength
-    ]
+    ],
   );
 });
 
@@ -24,11 +24,11 @@ Deno.test("decodePingresPacket", function decodePingresPacket() {
         0, // remainingLength
       ]),
       2,
-      0
+      0,
     ),
     {
       type: "pingres",
-    }
+    },
   );
 });
 

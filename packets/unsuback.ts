@@ -18,7 +18,7 @@ export function encode(packet: UnsubackPacket) {
 export function decode(
   buffer: Uint8Array,
   _remainingStart: number,
-  _remainingLength: number
+  _remainingLength: number,
 ): UnsubackPacket {
   const id = (buffer[2] << 8) + buffer[3];
 

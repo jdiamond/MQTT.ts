@@ -34,8 +34,7 @@ export function encode(packet: ConnectPacket, utf8Encoder: UTF8Encoder) {
   const willQoS = (packet.will && packet.will.qos) || 0;
   const willFlag = !!packet.will;
   const cleanSession = packet.clean || typeof packet.clean === "undefined";
-  const connectFlags =
-    (usernameFlag ? 128 : 0) +
+  const connectFlags = (usernameFlag ? 128 : 0) +
     (passwordFlag ? 64 : 0) +
     (willRetain ? 32 : 0) +
     (willQoS & 2 ? 16 : 0) +
@@ -43,10 +42,9 @@ export function encode(packet: ConnectPacket, utf8Encoder: UTF8Encoder) {
     (willFlag ? 4 : 0) +
     (cleanSession ? 2 : 0);
 
-  const keepAlive =
-    packet.keepAlive && typeof packet.keepAlive !== "undefined"
-      ? packet.keepAlive
-      : 0;
+  const keepAlive = packet.keepAlive && typeof packet.keepAlive !== "undefined"
+    ? packet.keepAlive
+    : 0;
 
   const variableHeader = [
     ...protocolName,
@@ -78,7 +76,7 @@ export function decode(
   buffer: Uint8Array,
   remainingStart: number,
   _remainingLength: number,
-  utf8Decoder: UTF8Decoder
+  utf8Decoder: UTF8Decoder,
 ): ConnectPacket {
   const protocolNameStart = remainingStart;
   const protocolName = decodeUTF8String(buffer, protocolNameStart, utf8Decoder);
@@ -128,9 +126,9 @@ export function decode(
     password: password ? password.value : undefined,
     will: willFlag
       ? {
-          retain: willRetain,
-          qos: willQoS,
-        }
+        retain: willRetain,
+        qos: willQoS,
+      }
       : undefined,
     clean: cleanSession,
     keepAlive,

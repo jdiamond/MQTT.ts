@@ -19,7 +19,7 @@ export function encode(packet: ConnackPacket) {
 export function decode(
   buffer: Uint8Array,
   _remainingStart: number,
-  remainingLength: number
+  remainingLength: number,
 ): ConnackPacket {
   if (remainingLength !== 2) {
     throw new Error("connack packets must have a length of 2");

@@ -19,7 +19,7 @@ Deno.test("encodeConnackPacket", function encodeConnackPacket() {
       // variableHeader
       0, // connack flags
       0, // return code
-    ]
+    ],
   );
 });
 
@@ -35,13 +35,13 @@ Deno.test("decodeConnackPacket", function decodeConnackPacket() {
         0, // return code
       ]),
       2,
-      2
+      2,
     ),
     {
       type: "connack",
       sessionPresent: false,
       returnCode: 0,
-    }
+    },
   );
 });
 
@@ -61,9 +61,9 @@ Deno.test(
         // variableHeader
         1, // connack flags (sessionPresent)
         0, // return code
-      ]
+      ],
     );
-  }
+  },
 );
 
 Deno.test(
@@ -80,15 +80,15 @@ Deno.test(
           0, // return code
         ]),
         2,
-        2
+        2,
       ),
       {
         type: "connack",
         sessionPresent: true,
         returnCode: 0,
-      }
+      },
     );
-  }
+  },
 );
 
 Deno.test(
@@ -105,15 +105,15 @@ Deno.test(
           4, // return code (bad username or password)
         ]),
         2,
-        2
+        2,
       ),
       {
         type: "connack",
         sessionPresent: false,
         returnCode: 4,
-      }
+      },
     );
-  }
+  },
 );
 
 Deno.test("decodeShortConnackPackets", function decodeShortConnackPackets() {
