@@ -1,4 +1,6 @@
+import { decodeBinaryValue, encodeBinaryValue } from "./binary.ts";
 import { encodeLength } from "./length.ts";
+import { PublishPayload } from "./publish.ts";
 import {
   decodeUTF8String,
   encodeUTF8String,
@@ -14,8 +16,10 @@ export interface ConnectPacket {
   username?: string;
   password?: string;
   will?: {
-    retain?: boolean;
-    qos?: 0 | 1 | 2;
+    retain: boolean;
+    qos: 0 | 1 | 2;
+    topic: string;
+    payload: PublishPayload;
   };
   clean?: boolean;
   keepAlive?: number;
@@ -29,16 +33,15 @@ export function encode(packet: ConnectPacket, utf8Encoder: UTF8Encoder) {
   const protocolLevel = 4;
 
   const usernameFlag = !!packet.username;
-  const passwordFlag = !!packet.password;
-  const willRetain = !!(packet.will && packet.will.retain);
-  const willQoS = (packet.will && packet.will.qos) || 0;
-  const willFlag = !!packet.will;
+  const passwordFlag = usernameFlag && !!packet.password;
+  const willRetain = packet?.will?.retain ?? false;
+  const willQoS = packet?.will?.qos ?? 0;
+  const willFlag = Object.hasOwn(packet, "will");
   const cleanSession = packet.clean || typeof packet.clean === "undefined";
   const connectFlags = (usernameFlag ? 128 : 0) +
     (passwordFlag ? 64 : 0) +
     (willRetain ? 32 : 0) +
-    (willQoS & 2 ? 16 : 0) +
-    (willQoS & 1 ? 8 : 0) +
+    (willQoS << 3) +
     (willFlag ? 4 : 0) +
     (cleanSession ? 2 : 0);
 
@@ -54,14 +57,26 @@ export function encode(packet: ConnectPacket, utf8Encoder: UTF8Encoder) {
     keepAlive & 0xff,
   ];
 
-  const payload = [...encodeUTF8String(packet.clientId, utf8Encoder)];
+  const encodeStr = (str: string) => encodeUTF8String(str, utf8Encoder);
 
-  if (packet.username) {
-    payload.push(...encodeUTF8String(packet.username, utf8Encoder));
+  const payload = [...encodeStr(packet.clientId)];
+
+  if (typeof packet.will !== "undefined") {
+    payload.push(...encodeStr(packet.will.topic));
+
+    if (typeof packet.will.payload === "string") {
+      payload.push(...encodeStr(packet.will.payload));
+    } else {
+      payload.push(...encodeBinaryValue(packet.will.payload));
+    }
   }
 
-  if (packet.password) {
-    payload.push(...encodeUTF8String(packet.password, utf8Encoder));
+  if (usernameFlag) {
+    payload.push(...encodeStr(packet.username!));
+  }
+
+  if (passwordFlag) {
+    payload.push(...encodeStr(packet.password!));
   }
 
   const fixedHeader = [
@@ -78,14 +93,16 @@ export function decode(
   _remainingLength: number,
   utf8Decoder: UTF8Decoder,
 ): ConnectPacket {
-  const protocolNameStart = remainingStart;
-  const protocolName = decodeUTF8String(buffer, protocolNameStart, utf8Decoder);
+  let readOffset = remainingStart;
 
-  const protocolLevelIndex = protocolNameStart + protocolName.length;
-  const protocolLevel = buffer[protocolLevelIndex];
+  const protocolName = decodeUTF8String(buffer, readOffset, utf8Decoder);
+  readOffset += protocolName.length;
 
-  const connectFlagsIndex = protocolLevelIndex + 1;
-  const connectFlags = buffer[connectFlagsIndex];
+  const protocolLevel = buffer[readOffset];
+  readOffset += 1;
+
+  const connectFlags = buffer[readOffset];
+  readOffset += 1;
   const usernameFlag = !!(connectFlags & 128);
   const passwordFlag = !!(connectFlags & 64);
   const willRetain = !!(connectFlags & 32);
@@ -97,24 +114,37 @@ export function decode(
     throw new Error("invalid will qos");
   }
 
-  const keepAliveIndex = connectFlagsIndex + 1;
-  const keepAlive = (buffer[keepAliveIndex] << 8) + buffer[keepAliveIndex + 1];
+  const keepAlive = (buffer[readOffset] << 8) + buffer[readOffset + 1];
+  readOffset += 2;
 
-  const clientIdStart = keepAliveIndex + 2;
-  const clientId = decodeUTF8String(buffer, clientIdStart, utf8Decoder);
+  const clientId = decodeUTF8String(buffer, readOffset, utf8Decoder);
+  readOffset += clientId.length;
 
-  let username;
-  let password;
+  let willTopic: string | undefined = undefined;
+  let willPayload: Uint8Array | undefined = undefined;
+  let username: string | undefined = undefined;
+  let password: string | undefined = undefined;
 
-  const usernameStart = clientIdStart + clientId.length;
+  if (willFlag) {
+    const topic = decodeUTF8String(buffer, readOffset, utf8Decoder);
+    willTopic = topic.value;
+    readOffset += topic.length;
+
+    const payload = decodeBinaryValue(buffer, readOffset);
+    willPayload = payload.value;
+    readOffset += topic.length;
+  }
 
   if (usernameFlag) {
-    username = decodeUTF8String(buffer, usernameStart, utf8Decoder);
+    const res = decodeUTF8String(buffer, readOffset, utf8Decoder);
+    readOffset += res.length;
+    username = res.value;
   }
 
   if (passwordFlag) {
-    const passwordStart = usernameStart + (username ? username.length : 0);
-    password = decodeUTF8String(buffer, passwordStart, utf8Decoder);
+    const res = decodeUTF8String(buffer, readOffset, utf8Decoder);
+    readOffset += res.length;
+    password = res.value;
   }
 
   return {
@@ -122,12 +152,14 @@ export function decode(
     protocolName: protocolName.value,
     protocolLevel,
     clientId: clientId.value,
-    username: username ? username.value : undefined,
-    password: password ? password.value : undefined,
+    username: username,
+    password: password,
     will: willFlag
       ? {
         retain: willRetain,
         qos: willQoS,
+        payload: willPayload ?? "",
+        topic: willTopic ?? "",
       }
       : undefined,
     clean: cleanSession,
