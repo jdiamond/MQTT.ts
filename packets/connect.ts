@@ -36,7 +36,7 @@ export function encode(packet: ConnectPacket, utf8Encoder: UTF8Encoder) {
   const passwordFlag = usernameFlag && !!packet.password;
   const willRetain = packet?.will?.retain ?? false;
   const willQoS = packet?.will?.qos ?? 0;
-  const willFlag = Object.hasOwn(packet, "will");
+  const willFlag = !!packet.will;
   const cleanSession = packet.clean || typeof packet.clean === "undefined";
   const connectFlags = (usernameFlag ? 128 : 0) +
     (passwordFlag ? 64 : 0) +

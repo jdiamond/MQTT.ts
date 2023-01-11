@@ -1,5 +1,5 @@
 import type { QoS } from "../lib/mod.ts";
-import { encode as connectEncoder } from "../packets/connect.ts";
+import { ConnectPacket, encode as connectEncoder } from "../packets/connect.ts";
 import { encode as disconnectEncoder } from "../packets/disconnect.ts";
 import type {
   AnyPacket,
@@ -46,6 +46,7 @@ export type ClientOptions = {
   reconnect?: boolean | RetryOptions;
   incomingStore?: IncomingStore;
   outgoingStore?: OutgoingStore;
+  will?: ConnectPacket["will"];
   logger?: (msg: string, ...args: unknown[]) => void;
 };
 
@@ -652,6 +653,7 @@ export abstract class Client {
           username: this.options.username,
           password: this.options.password,
           clean: this.options.clean !== false,
+          will: this.options.will,
           keepAlive: this.keepAlive,
         },
         connectEncoder,
@@ -1033,6 +1035,7 @@ export abstract class Client {
       defaultOptions = defaultReconnectOptions;
     }
 
+    //@ts-expect-error Cannot be false
     if (reconnectOptions === false) {
       return;
     } else if (reconnectOptions === true) {
